@@ -4,7 +4,8 @@
   "description": "MLM backend",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js",
+    "start": "nodemon --delay 500ms app.js",
+    "start-server": "node app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -18,6 +19,12 @@
   },
   "homepage": "https://github.com/MLM-Aldo/backend#readme",
   "dependencies": {
-    "express": "^4.18.2"
+    "body-parser": "^1.20.2",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "mongoose": "^7.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.21"
   }
 }
