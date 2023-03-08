@@ -3,15 +3,32 @@ const mongoose = require('mongoose');
 
 // Define the user schema using Mongoose
 const userSchema = new mongoose.Schema({
-  username: String,
-  password: String,
-  email: String,
-  phone: String,
-  referralCode: { type: String, unique: true }
+  username: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  password: {
+    type: String,
+    required: true
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  phone: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  referredBy: {
+    type: String,
+    required: true
+  },
+  referralCode: { type: String, unique: true },
 });
 
-// referredBy: String,
-// 
 
 // Create a pre-save hook to generate a unique referral code for each new user
 userSchema.pre('save', function (next) {
