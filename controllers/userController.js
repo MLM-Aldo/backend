@@ -1,12 +1,14 @@
 // Import the user model
 const User = require('../models/user');
 
+const referralController = require('../controllers/referralController');
+
 // Define the user controller functions
 exports.registerUser = (req, res) => {
   // Extract the data from the request body
   const { username, password, email, phone,referredBy } = req.body;
 
-  User.findOne({ referralCode: referredBy })
+  User.findOne({ referralCode: referredBy , active: true})
   .then(existingUser => {
     if (!existingUser) {
       // If the referral code is not valid, return an error response
@@ -22,11 +24,19 @@ exports.registerUser = (req, res) => {
       referredBy
     });
 
+    let userData = "";
     // Save the new user object to the database
     newUser.save()
     .then((user) => {
-      // If the user was saved successfully, return a success response
-      return res.status(200).json({ message: 'User registered successfully', user });
+      userData = user;
+      // add new user in referral collection
+      return referralController.registerUserReferral(referredBy,user.referralCode)
+    }).then(() => {
+      return referralController.updateReferralCount(referredBy)
+    })
+    .then(() => {
+       // If the user was saved successfully, return a success response
+       return res.status(200).json({ message: 'User registered successfully' , userData});
     })
     .catch((err) => {
       // If there was an error saving the user, return an error response

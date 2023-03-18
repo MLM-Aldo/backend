@@ -12,9 +12,12 @@ const app = express();
 app.use(bodyParser.json());
 
 
-// Define the user routes
+// Define the routes
 const userRoutes = require('./routes/userRoutes.js');
+const referralRoutes = require('./routes/referralRoutes.js');
+
 app.use('/users', userRoutes);
+app.use('/referrals', referralRoutes);
 
 
 mongoose.connect(process.env.MONGO_URL).then(result => {
