@@ -50,3 +50,46 @@ exports.registerUser = (req, res) => {
   });
 
 };
+exports.login = async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    // Find the user with the given username
+    const user = await User.findOne({ username });
+    if (!user) {
+      return res.status(401).send('Invalid username or password');
+    }
+
+    // Check if the password is correct
+    if (user.password !== password) {
+      return res.status(401).send('Invalid username or password');
+    }
+
+    // Set user ID in session
+    req.session.userId = user._id;
+
+    res.setHeader('X-MDM-SESSION-ID', user._id);
+
+
+    // Send the session ID back to the client
+    return res.status(200).json({ message: 'User logged in succesfully' });
+
+  } catch (err) {
+    console.error('Error finding user:', err);
+    res.status(500).send('Internal Server Error');
+  }
+};
+
+exports.logout = async (req, res) => {
+   // Clear the session
+   req.session.destroy((err) => {
+    if (err) {
+      console.error('Error destroying session:', err);
+      res.status(500).send('Internal Server Error');
+    } else {
+      // Redirect to the login page
+      return res.status(200).json({ message: 'User logged out succesfully' });
+    }
+  });
+};
+

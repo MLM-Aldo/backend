@@ -7,6 +7,8 @@ const router = express.Router();
 
 // Define the user routes
 router.post('/register', userController.registerUser);
+router.post('/login', userController.login);
+router.post('/logout', userController.logout);
 
 // Export the user routes
 module.exports = router;
