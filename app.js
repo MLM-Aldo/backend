@@ -8,16 +8,15 @@ const session = require('express-session');
 const redis = require('ioredis');
 const connectRedis = require('connect-redis');
 const RedisStore = connectRedis(session);
+const redisHost = process.env.REDIS_HOST || 'localhost';
 
 
 const redisClient = redis.createClient({
   port: 6379,
-  host: 'localhost'
+  host: redisHost
   });
 
 
-
-    
 var cookieParser = require('cookie-parser')
 
 const PORT = 3001;
