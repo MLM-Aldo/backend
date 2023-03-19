@@ -8,12 +8,11 @@ const session = require('express-session');
 const redis = require('ioredis');
 const connectRedis = require('connect-redis');
 const RedisStore = connectRedis(session);
-const redisHost = process.env.REDIS_HOST || 'localhost';
+const redisUrl = process.env.REDIS_URL || 'rediss://red-cgb8929mbg55nql9h2u0:X6AGBEWV20eKdwnRlJCbx3RCVhX60Bo2@oregon-redis.render.com:6379';
 const cors = require('cors');
 
 const redisClient = redis.createClient({
-  port: 6379,
-  host: redisHost
+  url: redisUrl
 });
 
 
