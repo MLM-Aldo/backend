@@ -14,7 +14,7 @@ const redisHost = process.env.REDIS_HOST || 'localhost';
 const redisClient = redis.createClient({
   port: 6379,
   host: redisHost
-  });
+});
 
 
 var cookieParser = require('cookie-parser')
@@ -46,7 +46,14 @@ app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+const swaggerUi = require("swagger-ui-express"),
+swaggerDocument = require("./swagger-output.json");
 
+app.use(
+  '/api-docs',
+  swaggerUi.serve, 
+  swaggerUi.setup(swaggerDocument)
+);
 
 // Define the routes
 const userRoutes = require('./routes/userRoutes.js');
@@ -54,7 +61,7 @@ const referralRoutes = require('./routes/referralRoutes.js');
 
 const requireSession = (req, res, next) => {
   // Skip validation if this is the /users/register or /users/login route
-  if (req.path === '/users/register' || req.path === '/users/login' || req.path == '/test') {
+  if (req.path === '/users/register' || req.path === '/users/login' || req.path == '/test' || req.path == '/api-docs') {
     return next();
   }
 

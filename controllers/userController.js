@@ -68,11 +68,9 @@ exports.login = async (req, res) => {
     // Set user ID in session
     req.session.userId = user._id;
 
-    res.setHeader('X-MDM-SESSION-ID', user._id);
-
 
     // Send the session ID back to the client
-    return res.status(200).json({ message: 'User logged in succesfully' });
+    return res.status(200).json({ message: 'User logged in succesfully',userData });
 
   } catch (err) {
     console.error('Error finding user:', err);
