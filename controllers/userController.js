@@ -70,7 +70,7 @@ exports.login = async (req, res) => {
 
 
     // Send the session ID back to the client
-    return res.status(200).json({ message: 'User logged in succesfully',userData });
+    return res.status(200).json({ message: 'User logged in succesfully',user });
 
   } catch (err) {
     console.error('Error finding user:', err);
