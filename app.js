@@ -9,7 +9,7 @@ const redis = require('ioredis');
 const connectRedis = require('connect-redis');
 const RedisStore = connectRedis(session);
 const redisHost = process.env.REDIS_HOST || 'localhost';
-
+const cors = require('cors');
 
 const redisClient = redis.createClient({
   port: 6379,
@@ -23,6 +23,10 @@ const PORT = 3001;
 
 // Create a new instance of the express server
 const app = express();
+
+app.use(cors({
+  origin: '*'
+}));
 
 app.use(session({
   store: new RedisStore({client: redisClient}),
