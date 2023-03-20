@@ -37,7 +37,7 @@ app.use(session({
   cookie: {
     secure: false,
     httpOnly: true,
-    maxAge: 1000 * 60 * 30
+    maxAge: 1000 * 60 * 30,
   }
   
   }));
@@ -65,7 +65,7 @@ const referralRoutes = require('./routes/referralRoutes.js');
 
 const requireSession = (req, res, next) => {
   // Skip validation if this is the /users/register or /users/login route
-  if (req.path === '/users/register' || req.path === '/users/login' || req.path == '/test' || req.path == '/api-docs') {
+  if (req.path === '/users/register' || req.path === '/users/login' || req.path == '/test' || req.path == '/api-docs' || req.path === '/users/allUsers') {
     return next();
   }
 

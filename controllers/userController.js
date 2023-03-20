@@ -78,6 +78,15 @@ exports.login = async (req, res) => {
   }
 };
 
+exports.allUsers = async (req, res) => {
+  try {
+    const users = await User.find({});
+    return res.status(200).json({users});
+  } catch(err) {
+    res.status(500).send('Internal Server Error');
+  }
+};
+
 exports.logout = async (req, res) => {
    // Clear the session
    req.session.destroy((err) => {
@@ -85,7 +94,6 @@ exports.logout = async (req, res) => {
       console.error('Error destroying session:', err);
       res.status(500).send('Internal Server Error');
     } else {
-      // Redirect to the login page
       return res.status(200).json({ message: 'User logged out succesfully' });
     }
   });
