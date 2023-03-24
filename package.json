@@ -21,6 +21,7 @@
   "homepage": "https://github.com/MLM-Aldo/backend#readme",
   "dependencies": {
     "body-parser": "^1.20.2",
+    "bullmq": "^3.10.2",
     "connect-redis": "^5.0.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",

@@ -23,28 +23,28 @@ exports.registerUserReferral = (referredBy, referralCode) => {
 };
 
 
-// update number of people referred
-exports.updateReferralCount = (referredBy) => {
+// // update number of people referred
+// exports.updateReferralCount = (referredBy) => {
   
-      return Referral.findOne({ referralCode: referredBy }).then((referral) => {
-        if (!referral) {
-            // If the referral code is not valid, return an error response
-            return false;
-          }
+//       return Referral.findOne({ referralCode: referredBy }).then((referral) => {
+//         if (!referral) {
+//             // If the referral code is not valid, return an error response
+//             return false;
+//           }
 
-        else {
-            let count = referral.levelOneReferrals;
-            count = count + 1;
-            referral.levelOneReferrals = count 
-            return referral.save()
-        }
-      }).then((data) => {
-        return true;
-      }).catch((err) => {
-        return false;
-      });
+//         else {
+//             let count = referral.levelOneReferrals;
+//             count = count + 1;
+//             referral.levelOneReferrals = count 
+//             return referral.save()
+//         }
+//       }).then((data) => {
+//         return true;
+//       }).catch((err) => {
+//         return false;
+//       });
   
       
    
   
-  };
+//   };

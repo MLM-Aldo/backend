@@ -4,20 +4,12 @@ const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv').config();
 
-const session = require('express-session');
-const redis = require('ioredis');
-const connectRedis = require('connect-redis');
-const RedisStore = connectRedis(session);
-const redisHost = process.env.REDIS_HOST || 'localhost';
+
 const cors = require('cors');
 
-const redisClient = redis.createClient({
-  port: 6379,
-  host: redisHost
-});
+const { redisClient, RedisStore, session } = require('./helper/redis');
 
-
-var cookieParser = require('cookie-parser')
+var cookieParser = require('cookie-parser');
 
 const PORT = 3001;
 

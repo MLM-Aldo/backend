@@ -10,7 +10,12 @@ const referralSchema = new mongoose.Schema({
   referralCode: { type: String, unique: true },
   level: {type: Number , min: 1, max: 10, default: 1},
   active: {type: Boolean, default: false},
-  levelOneReferrals :  {type: Number , default: 0},
+  level1 :  {type: Number , default: 0},
+  level2 :  {type: Number , default: 0},
+  level3 :  {type: Number , default: 0},
+  level4 :  {type: Number , default: 0},
+  level5 :  {type: Number , default: 0},
+  mlmProcessed: {type: Boolean, default: false}
 });
 
 // Create a new model for the referral schema
