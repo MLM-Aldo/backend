@@ -1,6 +1,6 @@
 // Import the user model
 const User = require('../models/user');
-const { addTask } = require('../helper/queue');
+// const { addTask } = require('../helper/queue');
 const { startJob } = require('../services/referral')
 
 const referralController = require('../controllers/referralController');
