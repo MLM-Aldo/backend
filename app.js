@@ -17,7 +17,8 @@ const PORT = 3001;
 const app = express();
 
 app.use(cors({
-  origin: '*'
+  origin: '*',
+  credentials: true // allow sending cookies across domains
 }));
 
 app.use(session({
