@@ -18,7 +18,8 @@ const app = express();
 
 app.use(cors({
   origin: '*',
-  credentials: true // allow sending cookies across domains
+  credentials: true, // allow sending cookies across domains
+  exposedHeaders: "*"
 }));
 
 app.use(session({
