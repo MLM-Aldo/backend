@@ -10,6 +10,7 @@ router.post('/register', userController.registerUser);
 router.post('/login', userController.login);
 router.post('/logout', userController.logout);
 router.get('/allUsers', userController.allUsers);
+router.get('/referrals/:referralCode', userController.referrals);
 
 
 // Export the user routes

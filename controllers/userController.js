@@ -55,6 +55,42 @@ User.findOne({ referralCode: referredBy , active: true})
   });
 
 };
+
+
+exports.allUsers = async (req, res) => {
+  try {
+    const users = await User.find({});
+    return res.status(200).json({users});
+  } catch(err) {
+    res.status(500).send('Internal Server Error');
+  }
+};
+
+exports.referrals = async (req, res) => {
+  const referralCode = req.params.referralCode;
+
+  try {
+      const users = await User.aggregate([
+        {
+            '$match': {
+                'referralCode': referralCode
+            }
+        }, {
+            '$graphLookup': {
+                'from': 'referrals', 
+                'startWith': '$referralCode', 
+                'connectFromField': 'referralCode', 
+                'connectToField': 'referredBy', 
+                'as': 'reportingHierarchy'
+            }
+        }
+    ]);
+    return res.status(200).json({users});
+  } catch(err) {
+    res.status(500).send('Internal Server Error');
+  }
+}
+
 exports.login = async (req, res) => {
   const { username, password } = req.body;
 
@@ -79,15 +115,6 @@ exports.login = async (req, res) => {
 
   } catch (err) {
     console.error('Error finding user:', err);
-    res.status(500).send('Internal Server Error');
-  }
-};
-
-exports.allUsers = async (req, res) => {
-  try {
-    const users = await User.find({});
-    return res.status(200).json({users});
-  } catch(err) {
     res.status(500).send('Internal Server Error');
   }
 };
