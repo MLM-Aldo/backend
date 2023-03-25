@@ -77,7 +77,7 @@ exports.referrals = async (req, res) => {
             }
         }, {
             '$graphLookup': {
-                'from': 'referrals', 
+                'from': 'users', 
                 'startWith': '$referralCode', 
                 'connectFromField': 'referralCode', 
                 'connectToField': 'referredBy', 
