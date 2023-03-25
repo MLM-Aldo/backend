@@ -19,7 +19,8 @@ const app = express();
 app.use(cors({
   origin: '*',
   credentials: true, // allow sending cookies across domains
-  exposedHeaders: ['set-cookie']
+  exposedHeaders: ['*'],
+  allowedHeaders: ['*']
 }));
 
 app.use(session({
