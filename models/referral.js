@@ -9,7 +9,7 @@ const referralSchema = new mongoose.Schema({
   },
   referralCode: { type: String, unique: true },
   level: {type: Number , min: 1, max: 10, default: 1},
-  active: {type: Boolean, default: false},
+  active: {type: Boolean, default: true},
   level1 :  {type: Number , default: 0},
   level2 :  {type: Number , default: 0},
   level3 :  {type: Number , default: 0},
