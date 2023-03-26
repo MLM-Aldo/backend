@@ -1,6 +1,6 @@
 const Referral = require('../models/referral');
-const registerationAmount = parseInt(process.env.REGISTERATION_FEE) || 125;
-const referralSystem =  JSON.parse(process.env.REFERRAL_SYSTEM) || {"1":25,"2":4,"3":3,"4":2,"5":1};
+const registerationAmount = process.env.REGISTERATION_FEE ? parseInt(process.env.REGISTERATION_FEE) : 125;
+const referralSystem =  process.env.REFERRAL_SYSTEM ? JSON.parse(process.env.REFERRAL_SYSTEM):  {"1":25,"2":4,"3":3,"4":2,"5":1};
 
 exports.startJob = async (job) => {
    try {
