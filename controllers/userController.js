@@ -1,8 +1,6 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/user");
-const { startJob } = require("../services/referral");
-
-const referralController = require("../controllers/referralController");
+const { startJob, registerUserReferral } = require('../services/referral')
 
 exports.registerUser = (req, res) => {
   const { username, password, email, phone, referredBy } = req.body;
@@ -21,24 +19,20 @@ exports.registerUser = (req, res) => {
         referredBy,
       });
 
-      let userData = "";
-      // Save the new user object to the database
-      newUser
-        .save()
-        .then((user) => {
-          userData = user;
-          // add new user in referral collection
-          return referralController.registerUserReferral(
-            referredBy,
-            user.referralCode
-          );
-        })
-        // .then(() => {
-        //   return referralController.updateReferralCount(referredBy)
-        // })
-        .then(() => {
-          delete user._doc.password;
-          delete user._doc.__v;
+    let userData = "";
+    // Save the new user object to the database
+    newUser.save()
+    .then((user) => {
+      userData = user;
+      // add new user in referral collection
+      return registerUserReferral(referredBy,user.referralCode);
+    })
+    // .then(() => {
+    //   return referralController.updateReferralCount(referredBy)
+    // })
+    .then(() => {
+      delete user._doc.password;
+      delete user._doc.__v;
 
           // If the user was saved successfully, return a success response
           startJob({ newUser: userData, referredBy: referredBy }).then(() => {
