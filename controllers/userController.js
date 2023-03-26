@@ -38,6 +38,9 @@ User.findOne({ referralCode: referredBy , active: true})
     //   return referralController.updateReferralCount(referredBy)
     // })
     .then(() => {
+      delete user._doc.password;
+      delete user._doc.__v;
+
        // If the user was saved successfully, return a success response
       startJob({newUser: userData, referredBy: referredBy}).then(() => {
         return res.status(200).json({ message: 'User registered successfully' , userData});
@@ -59,7 +62,8 @@ User.findOne({ referralCode: referredBy , active: true})
 
 exports.allUsers = async (req, res) => {
   try {
-    const users = await User.find({});
+    const users = await User.find({},'-password -__v');
+
     return res.status(200).json({users});
   } catch(err) {
     res.status(500).send('Internal Server Error');
