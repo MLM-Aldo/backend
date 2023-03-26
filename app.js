@@ -60,7 +60,9 @@ const referralRoutes = require('./routes/referralRoutes.js');
 
 const requireSession = (req, res, next) => {
   // Skip validation if this is the /users/register or /users/login route
-  if (req.path === '/users/register' || req.path === '/users/login' || req.path == '/test' || req.path == '/api-docs' || req.path === '/users/allUsers' || req.path.includes('/users/referrals')) {
+  if (req.path === '/users/register' || req.path === '/users/login' || req.path == '/test' || req.path == '/api-docs' || req.path === '/users/allUsers' || req.path.includes('/users/referrals') 
+  || req.path.includes('/referrals/referralBonus')
+  ) {
     return next();
   }
 

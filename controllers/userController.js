@@ -1,9 +1,7 @@
 // Import the user model
 const User = require('../models/user');
 // const { addTask } = require('../helper/queue');
-const { startJob } = require('../services/referral')
-
-const referralController = require('../controllers/referralController');
+const { startJob, registerUserReferral } = require('../services/referral')
 
 // Define the user controller functions
 exports.registerUser = (req, res) => {
@@ -32,7 +30,7 @@ User.findOne({ referralCode: referredBy , active: true})
     .then((user) => {
       userData = user;
       // add new user in referral collection
-      return referralController.registerUserReferral(referredBy,user.referralCode)
+      return registerUserReferral(referredBy,user.referralCode);
     })
     // .then(() => {
     //   return referralController.updateReferralCount(referredBy)

@@ -1,4 +1,6 @@
 const Referral = require('../models/referral');
+const registerationAmount = parseInt(process.env.REGISTERATION_FEE) || 125;
+const referralSystem =  JSON.parse(process.env.REFERRAL_SYSTEM) || {"1":25,"2":4,"3":3,"4":2,"5":1};
 
 exports.startJob = async (job) => {
    try {
@@ -77,3 +79,48 @@ exports.startJob = async (job) => {
        res.status(500).send('Internal Server Error');
    }
 }
+
+// Define the user controller functions
+exports.registerUserReferral = (referredBy, referralCode) => {
+
+    // Otherwise, create a new user object using the data
+    const newUserReferral = new Referral({
+      referredBy, referralCode
+    });
+
+    // Save the new user object to the database
+    return newUserReferral.save()
+    .then((user) => {
+        return true;
+    })
+    .catch((err) => {
+      // If there was an error saving the user, return an error response
+      return false;
+    });
+ 
+
+};
+
+// Define the user controller functions
+exports.referralBonus = async( referralCode) => {
+    try{
+        const referral = await Referral.findOne({referralCode: referralCode});
+        const level = parseInt(referral.level);
+        
+        let amount = 0;
+        for (let i = 1; i < level+1; i++){
+            if(referral['level'+i]  > 0){
+                let bonus = referral['level'+i] * (referralSystem[''+i] / 100) * registerationAmount;
+                amount = amount + bonus;
+            }
+        }
+
+        return amount;
+    } catch(err) {
+        return null;
+
+    }
+
+ 
+
+};

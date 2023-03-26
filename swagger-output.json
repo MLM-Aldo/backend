@@ -160,7 +160,33 @@
           }
         }
       }
+    },
+    "/referrals/referralBonus/{referralCode}": {
+      "get": {
+        "description": "get the referral bonus for user",
+        "parameters": [
+          {
+            "name": "referralCode",
+            "in": "path",
+            "required": true,
+            "description": "The referral code to lookup",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
     }
-    
   }
 }
