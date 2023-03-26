@@ -114,12 +114,13 @@ exports.login = async (req, res) => {
 };
 
 exports.logout = async (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      console.error("Error destroying session:", err);
-      res.status(500).send("Internal Server Error");
-    } else {
-      return res.status(200).json({ message: "User logged out succesfully" });
-    }
-  });
+  // req.session.destroy((err) => {
+  //   if (err) {
+  //     console.error("Error destroying session:", err);
+  //     res.status(500).send("Internal Server Error");
+  //   } else {
+  //     return res.status(200).json({ message: "User logged out succesfully" });
+  //   }
+  // });
+  return res.status(200).json({ message: "User logged out successfully" });
 };
