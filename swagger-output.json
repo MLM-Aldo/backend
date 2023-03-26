@@ -312,6 +312,51 @@
         }
       }
     },
+    "/users/{id}/status": {
+      "put": {
+        "tags": ["users"],
+        "summary": "Update user status",
+        "description": "Toggle the active status of a user",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The ID of the user to update",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "active": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "active"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. The updated user object is returned in the response body."
+          },
+          "404": {
+            "description": "The requested user was not found."
+          },
+          "500": {
+            "description": "Internal server error."
+            
+          }
+        }
+      }
+    },
     "/users/allUsers": {
       "get": {
         "tags": ["users"],
