@@ -141,3 +141,31 @@ exports.updatePassword = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 }
+
+exports.updateUserData = async (req, res) => {
+  const { id } = req.params;
+  const { email, phone, username } = req.body;
+
+  try {
+    // Check if username is already taken
+    const existingUser = await User.findOne({ username });
+    if (existingUser && existingUser._id.toString() !== id) {
+      return res.status(409).json({ message: 'Username is already taken' });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      id,
+      { email, phone, username },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+}

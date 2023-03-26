@@ -144,7 +144,15 @@
         ],
         "summary": "logout the user",
         "description": "Endpoint for logging out the user",
-        "parameters": [],
+        "parameters": [ {
+          "name": "authorization",
+          "in": "header",
+          "description": "An authorization token",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }],
         "responses": {
           "200": {
             "description": "OK"
@@ -174,27 +182,36 @@
             "schema": {
               "type": "string"
             }
-          }
-        ],
-        "requestBody": {
-          "description": "User object containing old and new password",
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "oldPassword": {
-                    "type": "string"
-                  },
-                  "newPassword": {
-                    "type": "string"
-                  }
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "oldPassword": {
+                  "type": "string"
+                },
+                "newPassword": {
+                  "type": "string"
                 }
-              }
+              },
+              "required": [
+                "oldPassword",
+                "newPassword"
+              ]
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "description": "An authorization token",
+            "required": true,
+            "schema": {
+              "type": "string"
             }
           }
-        },
+        ],
         "responses": {
           "200": {
             "description": "User password updated successfully"
@@ -214,6 +231,87 @@
         }
       }
     },
+    "/users/{id}": {
+      "put": {
+        "summary": "Update user data such as email, phone number, and username",
+        "description": "Update user data such as email, phone number, and username",
+        "tags": [
+          "users"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The ID of the user to update",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "username": {
+                  "type": "string",
+                  "example": "johndoe"
+                },
+               
+                "email": {
+                  "type": "string",
+                  "example": "johndoe@example.com"
+                },
+                "phone": {
+                  "type": "string",
+                  "example": "1234567890"
+                }
+              },
+              "required": [
+                "username",
+                "phone",
+                "email"
+              ]
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "description": "An authorization token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User data updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request. The request could not be understood or was missing required parameters"
+          },
+          "404": {
+            "description": "User not found"
+          },
+          "409": {
+            "description": "Username is already taken"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/users/allUsers": {
       "get": {
         "tags": ["users"],
@@ -221,7 +319,16 @@
         "description": "get all the users who have registered",
         "parameters": [
           {
-            "name": "Authorization",
+            "name": "authorization",
+            "in": "header",
+            "description": "An authorization token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
             "in": "header",
             "description": "An authorization token",
             "required": true,
@@ -256,9 +363,18 @@
             }
           },
           {
-            "name": "Authorization",
+            "name": "authorization",
             "in": "header",
             "description": "An authorization token.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "description": "An authorization token",
             "required": true,
             "schema": {
               "type": "string"
@@ -327,7 +443,7 @@
             "type": "string"
           },
           {
-            "name": "Authorization",
+            "name": "authorization",
             "in": "header",
             "description": "An authorization token.",
             "required": true,
