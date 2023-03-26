@@ -27,7 +27,8 @@ const userSchema = new mongoose.Schema({
     required: true
   },
   referralCode: { type: String, unique: true },
-  active: {type: Boolean, default: true}
+  active: {type: Boolean, default: true},
+  isAdmin: {type: Boolean, default: false}
 });
 
 
