@@ -1,19 +1,13 @@
-// Import required modules
 const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv').config();
-
-
+const jwt = require('jsonwebtoken');
 const cors = require('cors');
-
-const { redisClient, RedisStore, session } = require('./helper/redis');
-
-var cookieParser = require('cookie-parser');
+const cookieParser = require('cookie-parser');
 
 const PORT = 3001;
 
-// Create a new instance of the express server
 const app = express();
 
 app.use(cors({
@@ -23,24 +17,8 @@ app.use(cors({
   allowedHeaders: ['*']
 }));
 
-app.use(session({
-  store: new RedisStore({client: redisClient}),
-  secret: 'mySecret',
-  saveUninitialized: false,
-  resave: false,
-  name:'sessionId',
-  cookie: {
-    secure: false,
-    httpOnly: true,
-    maxAge: 1000 * 60 * 30,
-  }
-  
-  }));
-
 app.set('trust proxy', 1);
 
-
-// Configure the bodyParser middleware to handle JSON data
 app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -58,21 +36,28 @@ app.use(
 const userRoutes = require('./routes/userRoutes.js');
 const referralRoutes = require('./routes/referralRoutes.js');
 
-const requireSession = (req, res, next) => {
-  // Skip validation if this is the /users/register or /users/login route
-  if (req.path === '/users/register' || req.path === '/users/login' || req.path == '/test' || req.path == '/api-docs' || req.path === '/users/allUsers' || req.path.includes('/users/referrals')) {
+const authenticateToken = (req, res, next) => {
+  // skip for following routes.
+  if (req.path === '/users/register' || req.path === '/users/login' || req.path == '/test' || req.path == '/api-docs') {
     return next();
   }
 
-  // Validate session key
-  if (!req.session || !req.session.userId) {
-    res.status(401).send('Unauthorized');
-  } else {
-    next();
-  }
-};
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
 
-app.use(requireSession);
+  if (token == null) {
+    return res.sendStatus(401);
+  }
+
+  jwt.verify(token, process.env.SECRET_KEY, (err, decoded) => {
+    if (err) return res.sendStatus(403);
+    
+    req.userId = decoded.userId;
+    next();
+  });
+}
+
+app.use(authenticateToken)
 
 app.get('/test', (req, res) => {
   res.send('Hello, world!');
