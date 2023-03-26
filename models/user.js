@@ -28,7 +28,8 @@ const userSchema = new mongoose.Schema({
   },
   referralCode: { type: String, unique: true },
   active: {type: Boolean, default: true},
-  isAdmin: {type: Boolean, default: false}
+  isAdmin: {type: Boolean, default: false},
+  created_at: { type: Date, default: Date.now },
 });
 
 
