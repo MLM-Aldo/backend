@@ -1,8 +1,8 @@
- {
+{
   "swagger": "2.0",
   "info": {
-    "title": "My API",
-    "description": "Description",
+    "title": "MLM API",
+    "description": "API for managing a Multi-Level Marketing (MLM) platform.",
     "version": "1.0.0"
   },
   "host": "mlm-backend-drdz.onrender.com",
@@ -10,10 +10,20 @@
   "schemes": [
     "https"
   ],
+  "tags": [
+    {
+      "name": "users",
+      "description": "Endpoints for managing users."
+    },
+    {
+      "name": "referrals",
+      "description": "Endpoints for managing referrals and bonuses."
+    }
+  ],
   "paths": {
     "/test": {
       "get": {
-        "description": "",
+        "description": "A test endpoint for checking if the API is up and running.",
         "parameters": [],
         "responses": {
           "200": {
@@ -27,7 +37,11 @@
     },
     "/users/register": {
       "post": {
-        "description": "",
+        "summary": "registering new users.",
+        "description": "Endpoint for registering new users.",
+        "tags": [
+          "users"
+        ],
         "parameters": [
           {
             "name": "body",
@@ -36,21 +50,31 @@
               "type": "object",
               "properties": {
                 "username": {
-                  "example": "any"
+                  "type": "string",
+                  "example": "johndoe"
                 },
                 "password": {
-                  "example": "any"
+                  "type": "string",
+                  "example": "p@ssw0rd"
                 },
                 "email": {
-                  "example": "any"
+                  "type": "string",
+                  "example": "johndoe@example.com"
                 },
                 "phone": {
-                  "example": "any"
+                  "type": "string",
+                  "example": "1234567890"
                 },
                 "referredBy": {
-                  "example": "any"
+                  "type": "string",
+                  "example": "janesmith"
                 }
-              }
+              },
+              "required": [
+                "username",
+                "password",
+                "email"
+              ]
             }
           }
         ],
@@ -72,7 +96,11 @@
     },
     "/users/login": {
       "post": {
-        "description": "",
+        "summary": "logging in existing users.",
+        "description": "Endpoint for logging in existing users.",
+        "tags": [
+          "users"
+        ],
         "parameters": [
           {
             "name": "body",
@@ -81,12 +109,18 @@
               "type": "object",
               "properties": {
                 "username": {
-                  "example": "any"
+                  "type": "string",
+                  "example": "johndoe"
                 },
                 "password": {
-                  "example": "any"
+                  "type": "string",
+                  "example": "p@ssw0rd"
                 }
-              }
+              },
+              "required": [
+                "username",
+                "password"
+              ]
             }
           }
         ],
@@ -105,7 +139,11 @@
     },
     "/users/logout": {
       "post": {
-        "description": "",
+        "tags": [
+          "users"
+        ],
+        "summary": "logout the user",
+        "description": "Endpoint for logging out the user",
         "parameters": [],
         "responses": {
           "200": {
@@ -120,16 +158,78 @@
         }
       }
     },
+    "/users/{id}/password": {
+      "put": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Update user password",
+        "description": "Updates the password for a specific user",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID of user to update",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "User object containing old and new password",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "oldPassword": {
+                    "type": "string"
+                  },
+                  "newPassword": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User password updated successfully"
+          },
+          "400": {
+            "description": "Bad request - request body missing or invalid"
+          },
+          "401": {
+            "description": "Unauthorized - user not authenticated"
+          },
+          "404": {
+            "description": "User not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/users/allUsers": {
       "get": {
+        "tags": ["users"],
+        "summary": "get all the users who have registered",
         "description": "get all the users who have registered",
-        "parameters": [{
-          "name": "Authorization",
-          "in": "header",
-          "description": "An authorization token",
-          "required": true,
-          "type": "string"
-        }],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "An authorization token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -142,13 +242,15 @@
     },
     "/users/referrals/{referralCode}": {
       "get": {
-        "description": "",
+        "tags": ["referrals"],
+        "summary": "Get user referrals by referral code",
+        "description": "Returns the referrals associated with a specific referral code.",
         "parameters": [
           {
             "name": "referralCode",
             "in": "path",
             "required": true,
-            "description": "The referral code to lookup",
+            "description": "The referral code to lookup.",
             "schema": {
               "type": "string"
             }
@@ -156,14 +258,49 @@
           {
             "name": "Authorization",
             "in": "header",
-            "description": "An authorization token",
+            "description": "An authorization token.",
             "required": true,
-            "type": "string"
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "email": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "example": [
+                  {
+                    "id": "123",
+                    "name": "John Doe",
+                    "email": "johndoe@example.com"
+                  },
+                  {
+                    "id": "456",
+                    "name": "Jane Doe",
+                    "email": "janedoe@example.com"
+                  }
+                ]
+              }
+            }
           },
           "401": {
             "description": "Unauthorized"
@@ -176,34 +313,72 @@
     },
     "/referrals/referralBonus/{referralCode}": {
       "get": {
-        "description": "get the referral bonus for user",
+        "tags": [
+          "referrals"
+        ],
+        "summary": "Get referral bonus",
+        "description": "Retrieve the referral bonus associated with the specified referral code.",
         "parameters": [
           {
             "name": "referralCode",
             "in": "path",
+            "description": "The referral code to lookup.",
             "required": true,
-            "description": "The referral code to lookup",
-            "schema": {
-              "type": "string"
-            }
+            "type": "string"
           },
           {
             "name": "Authorization",
             "in": "header",
-            "description": "An authorization token",
+            "description": "An authorization token.",
             "required": true,
             "type": "string"
           }
         ],
         "responses": {
           "200": {
-            "description": "OK"
+            "description": "Success",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "bonusAmount": {
+                  "type": "number",
+                  "description": "The amount of the referral bonus, in dollars."
+                }
+              }
+            },
+            "example": {
+              "bonusAmount": 25.0
+            }
           },
           "401": {
-            "description": "Unauthorized"
+            "description": "Unauthorized",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "description": "Error message indicating the reason for unauthorized access."
+                }
+              }
+            },
+            "example": {
+              "error": "Invalid token"
+            }
           },
           "500": {
-            "description": "Internal Server Error"
+            "description": "Internal Server Error",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "description": "Error message indicating the cause of the server error."
+                }
+              }
+            },
+            "example": {
+              "error": "Database connection failed"
+            }
           }
         }
       }

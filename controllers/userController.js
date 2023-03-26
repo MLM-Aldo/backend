@@ -117,3 +117,27 @@ exports.logout = async (req, res) => {
   return res.status(200).json({ message: "User logged out successfully" });
 };
 
+exports.updatePassword = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check if the old password is correct
+    if (req.body.oldPassword != user.password) {
+      return res.status(400).json({ error: 'Invalid old password' });
+    }
+
+    // update the user's password field
+    user.password = req.body.newPassword;
+
+    // Save the updated user to the database
+    await user.save();
+
+    res.status(200).json({ message: 'Password updated successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+}

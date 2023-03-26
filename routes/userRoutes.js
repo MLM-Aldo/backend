@@ -11,6 +11,7 @@ router.post('/login', userController.login);
 router.post('/logout', userController.logout);
 router.get('/allUsers', userController.allUsers);
 router.get('/referrals/:referralCode', userController.referrals);
+router.get('/:id/password', userController.updatePassword);
 
 
 // Export the user routes
