@@ -70,47 +70,6 @@
         }
       }
     },
-    "/users/allUsers": {
-      "get": {
-        "description": "get all the users who have registered",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          }
-        }
-      }
-    },
-    "/users/referrals/{referralCode}": {
-      "get": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "referralCode",
-            "in": "path",
-            "required": true,
-            "description": "The referral code to lookup",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
     "/users/login": {
       "post": {
         "description": "",
@@ -161,6 +120,60 @@
         }
       }
     },
+    "/users/allUsers": {
+      "get": {
+        "description": "get all the users who have registered",
+        "parameters": [{
+          "name": "Authorization",
+          "in": "header",
+          "description": "An authorization token",
+          "required": true,
+          "type": "string"
+        }],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/users/referrals/{referralCode}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "referralCode",
+            "in": "path",
+            "required": true,
+            "description": "The referral code to lookup",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "An authorization token",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
     "/referrals/referralBonus/{referralCode}": {
       "get": {
         "description": "get the referral bonus for user",
@@ -173,6 +186,13 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "description": "An authorization token",
+            "required": true,
+            "type": "string"
           }
         ],
         "responses": {
