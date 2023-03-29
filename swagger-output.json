@@ -20,6 +20,18 @@
       "description": "Endpoints for managing referrals and bonuses."
     }
   ],
+  "securityDefinitions": {
+    "myAuthorization": {
+      "type": "apiKey",
+      "name": "authorization",
+      "in": "header"
+    }
+  },
+  "security": [
+    {
+      "myAuthorization": []
+    }
+  ],
   "paths": {
     "/test": {
       "get": {
@@ -39,6 +51,7 @@
       "post": {
         "summary": "registering new users.",
         "description": "Endpoint for registering new users.",
+
         "tags": [
           "users"
         ],
@@ -144,15 +157,12 @@
         ],
         "summary": "logout the user",
         "description": "Endpoint for logging out the user",
-        "parameters": [ {
-          "name": "authorization",
-          "in": "header",
-          "description": "An authorization token",
-          "required": true,
-          "schema": {
-            "type": "string"
+        "security": [
+          {
+            "myAuthorization": []
           }
-        }],
+        ],
+        "parameters": [],
         "responses": {
           "200": {
             "description": "OK"
@@ -173,6 +183,11 @@
         ],
         "summary": "Update user password",
         "description": "Updates the password for a specific user",
+        "security": [
+          {
+            "myAuthorization": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -201,15 +216,6 @@
                 "newPassword"
               ]
             }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "description": "An authorization token",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -235,6 +241,11 @@
       "put": {
         "summary": "Update user data such as email, phone number, and username",
         "description": "Update user data such as email, phone number, and username",
+        "security": [
+          {
+            "myAuthorization": []
+          }
+        ],
         "tags": [
           "users"
         ],
@@ -275,15 +286,6 @@
                 "email"
               ]
             }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "description": "An authorization token",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -317,6 +319,11 @@
         "tags": ["users"],
         "summary": "Update user status",
         "description": "Toggle the active status of a user",
+        "security": [
+          {
+            "myAuthorization": []
+          }
+        ],
         "parameters": [
           {
             "name": "id",
@@ -362,17 +369,12 @@
         "tags": ["users"],
         "summary": "get all the users who have registered",
         "description": "get all the users who have registered",
-        "parameters": [
+        "security": [
           {
-            "name": "authorization",
-            "in": "header",
-            "description": "An authorization token",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
+            "myAuthorization": []
           }
         ],
+        "parameters": [],
         "responses": {
           "200": {
             "description": "OK"
@@ -388,30 +390,17 @@
         "tags": ["referrals"],
         "summary": "Get user referrals by referral code",
         "description": "Returns the referrals associated with a specific referral code.",
+        "security": [
+          {
+            "myAuthorization": []
+          }
+        ],
         "parameters": [
           {
             "name": "referralCode",
             "in": "path",
             "required": true,
             "description": "The referral code to lookup.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "description": "An authorization token.",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "description": "An authorization token",
-            "required": true,
             "schema": {
               "type": "string"
             }
@@ -470,18 +459,16 @@
         ],
         "summary": "Get referral bonus",
         "description": "Retrieve the referral bonus associated with the specified referral code.",
+        "security": [
+          {
+            "myAuthorization": []
+          }
+        ],
         "parameters": [
           {
             "name": "referralCode",
             "in": "path",
             "description": "The referral code to lookup.",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "description": "An authorization token.",
             "required": true,
             "type": "string"
           }
