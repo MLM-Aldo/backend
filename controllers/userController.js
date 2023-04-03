@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/user");
-const { startJob, registerUserReferral } = require('../services/referral')
+const { startJob, registerUserReferral } = require("../services/referral");
 
 exports.registerUser = (req, res) => {
   const { username, password, email, phone, referredBy } = req.body;
@@ -19,20 +19,21 @@ exports.registerUser = (req, res) => {
         referredBy,
       });
 
-    let userData = "";
-    // Save the new user object to the database
-    newUser.save()
-    .then((user) => {
-      userData = user;
-      // add new user in referral collection
-      return registerUserReferral(referredBy,user.referralCode);
-    })
-    // .then(() => {
-    //   return referralController.updateReferralCount(referredBy)
-    // })
-    .then(() => {
-      delete user._doc.password;
-      delete user._doc.__v;
+      let userData = "";
+      // Save the new user object to the database
+      newUser
+        .save()
+        .then((user) => {
+          userData = user;
+          // add new user in referral collection
+          return registerUserReferral(referredBy, user.referralCode);
+        })
+        // .then(() => {
+        //   return referralController.updateReferralCount(referredBy)
+        // })
+        .then(() => {
+          delete user._doc.password;
+          delete user._doc.__v;
 
           // If the user was saved successfully, return a success response
           startJob({ newUser: userData, referredBy: referredBy }).then(() => {
@@ -103,7 +104,9 @@ exports.login = async (req, res) => {
     if (user) {
       const token = jwt.sign({ userId: user.id }, process.env.SECRET_KEY);
       res.json({ user, token });
-      return res.status(200).json({ message: "User logged in successfully", user });
+      return res
+        .status(200)
+        .json({ message: "User logged in successfully", user });
     } else {
       return res.status(401).json({ message: "Invalid username or password" });
     }
@@ -121,12 +124,12 @@ exports.updatePassword = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: "User not found" });
     }
 
     // Check if the old password is correct
     if (req.body.oldPassword != user.password) {
-      return res.status(400).json({ error: 'Invalid old password' });
+      return res.status(400).json({ error: "Invalid old password" });
     }
 
     // update the user's password field
@@ -135,12 +138,12 @@ exports.updatePassword = async (req, res) => {
     // Save the updated user to the database
     await user.save();
 
-    res.status(200).json({ message: 'Password updated successfully' });
+    res.status(200).json({ message: "Password updated successfully" });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: "Server error" });
   }
-}
+};
 
 exports.updateUserData = async (req, res) => {
   const { id } = req.params;
@@ -150,7 +153,7 @@ exports.updateUserData = async (req, res) => {
     // Check if username is already taken
     const existingUser = await User.findOne({ username });
     if (existingUser && existingUser._id.toString() !== id) {
-      return res.status(409).json({ message: 'Username is already taken' });
+      return res.status(409).json({ message: "Username is already taken" });
     }
 
     const user = await User.findByIdAndUpdate(
@@ -160,15 +163,15 @@ exports.updateUserData = async (req, res) => {
     );
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
     res.status(200).json(user);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
-}
+};
 
 exports.toggleUserStatus = async (req, res) => {
   const { id } = req.params;
@@ -177,7 +180,7 @@ exports.toggleUserStatus = async (req, res) => {
   try {
     const user = await User.findById(id);
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
     user.active = active;
@@ -186,6 +189,31 @@ exports.toggleUserStatus = async (req, res) => {
     res.status(200).json(user);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
-}
+};
+
+exports.requestFund = async (req, res) => {
+  const { id } = req.params;
+  const { amount_requested } = req.body;
+
+  const user = await User.findById(id);
+
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  const user_id = id;
+  const amount_request_status = "waiting";
+
+  const newFund = new Fund({
+    user_id,
+    amount_requested,
+    amount_request_status,
+  });
+  newFund.save().then(() => {
+    return res
+      .status(200)
+      .json({ message: "Add fund request sent successfully" });
+  });
+};

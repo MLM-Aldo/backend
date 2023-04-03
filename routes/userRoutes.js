@@ -14,7 +14,7 @@ router.get('/referrals/:referralCode', userController.referrals);
 router.put('/:id/password', userController.updatePassword);
 router.put('/:id', userController.updateUserData);
 router.put('/:id/status', userController.toggleUserStatus);
-
+router.post('/:id/requestFund', userController.requestFund);
 
 // Export the user routes
 module.exports = router;
