@@ -215,5 +215,9 @@ exports.requestFund = async (req, res) => {
     return res
       .status(200)
       .json({ message: "Add fund request sent successfully" });
+  }).catch(()=>{
+    return res
+      .status(500)
+      .json({ message: "Failed to add fund request" });
   });
 };
