@@ -521,6 +521,85 @@
           }
         }
       }
+    },
+    "users/{id}/requestFund": {
+      "post": {
+        "tags": [
+          "request fund"
+        ],
+        "summary": "Request fund to add in wallet",
+        "description": "Request fund to add in wallet.",
+        "security": [
+          {
+            "myAuthorization": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "amount_requested": {
+                  "type": "number",
+                  "example": 1
+                }
+              },
+              "required": [
+                "amount_requested"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "amount_requested": {
+                  "type": "number",
+                  "description": "fund will be added to wallet."
+                }
+              }
+            },
+            "example": {
+              "bonusAmount": 25.0
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "description": "Error message indicating the reason for unauthorized access."
+                }
+              }
+            },
+            "example": {
+              "error": "Invalid token"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "description": "Error message indicating the cause of the server error."
+                }
+              }
+            },
+            "example": {
+              "error": "Database connection failed"
+            }
+          }
+        }
+      }
     }
   }
 }
