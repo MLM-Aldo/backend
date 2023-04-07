@@ -1,6 +1,8 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/user");
+const Fund = require("../models/fund");
 const { startJob, registerUserReferral } = require("../services/referral");
+const { v4: uuidv4 } = require('uuid');
 
 exports.registerUser = (req, res) => {
   const { username, password, email, phone, referredBy } = req.body;
@@ -207,6 +209,7 @@ exports.requestFund = async (req, res) => {
   const amount_request_status = "waiting";
 
   const newFund = new Fund({
+    transaction_id: 'TXN' + uuidv4(),
     user_id,
     amount_requested,
     amount_request_status,
@@ -215,9 +218,9 @@ exports.requestFund = async (req, res) => {
     return res
       .status(200)
       .json({ message: "Add fund request sent successfully" });
-  }).catch(()=>{
+  }).catch((err)=>{
     return res
       .status(500)
-      .json({ message: "Failed to add fund request" });
+      .json({ message: "Failed to add fund request: " + err.toString() });
   });
 };

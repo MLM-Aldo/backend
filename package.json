@@ -31,7 +31,8 @@
     "mongoose": "^7.0.1",
     "swagger-autogen": "^2.23.1",
     "swagger-ui-express": "^4.6.2",
-    "uuid": "^9.0.0"
+    "uuid": "^9.0.0",
+    "winston": "^3.8.2"
   },
   "devDependencies": {
     "nodemon": "^2.0.21"
