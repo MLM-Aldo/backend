@@ -16,6 +16,7 @@ router.put('/:id', userController.updateUserData);
 router.put('/:id/status', userController.toggleUserStatus);
 router.post('/:id/requestFund', userController.requestFund);
 router.post('/:id/withdrawFund', userController.withdrawFund);
+router.get('/:id/withdrawHistory', userController.withdrawHistory);
 
 // Export the user routes
 module.exports = router;

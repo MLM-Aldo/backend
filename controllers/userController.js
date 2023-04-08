@@ -225,6 +225,7 @@ exports.requestFund = async (req, res) => {
       .json({ message: "Failed to add fund request: " + err.toString() });
   });
 };
+
 exports.withdrawFund = async (req, res) => {
   const { id } = req.params;
   const { amount_withdraw } = req.body;
@@ -253,4 +254,14 @@ exports.withdrawFund = async (req, res) => {
       .status(500)
       .json({ message: "Failed to withdraw amount request: " + err.toString() });
   });
+};
+
+exports.withdrawHistory = async (req, res) => {
+  try {
+    const withdrawLists = await withdraw.find({}, "");
+
+    return res.status(200).json({ withdrawLists });
+  } catch (err) {
+    res.status(500).send("Internal Server Error");
+  }
 };

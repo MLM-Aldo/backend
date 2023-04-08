@@ -608,7 +608,7 @@
         }
       }
     },
-    "/users/{id}/Withdraw": {
+    "/users/{id}/withdrawFund": {
       "post": {
         "tags": [
           "Withdraw fund"
@@ -690,6 +690,27 @@
             "example": {
               "error": "Database connection failed"
             }
+          }
+        }
+      }
+    },
+    "/users/{id}/withdrawHistory": {
+      "get": {
+        "tags": ["Withdraw fund"],
+        "summary": "get all the Withdraw Of Users",
+        "description": "get all the Withdraw Of Users",
+        "security": [
+          {
+            "myAuthorization": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
           }
         }
       }
