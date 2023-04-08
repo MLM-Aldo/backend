@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/user");
 const Fund = require("../models/fund");
-const Withdraw = require("../models/withdraw");
+const withdraw = require("../models/withdraw");
 const { startJob, registerUserReferral } = require("../services/referral");
 const { v4: uuidv4 } = require('uuid');
 
@@ -238,13 +238,13 @@ exports.withdrawFund = async (req, res) => {
   const user_id = id;
   const amount_withdraw_status = "waiting";
 
-  const newFund = new Fund({
+  const newWithdraw = new withdraw({
     transaction_id: 'TXN' + uuidv4(),
     user_id,
     amount_withdraw,
     amount_withdraw_status,
   });
-  newFund.save().then(() => {
+  newWithdraw.save().then(() => {
     return res
       .status(200)
       .json({ message: "Withdraw Amount request sent successfully" });
