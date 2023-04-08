@@ -634,7 +634,7 @@
             "schema": {
               "type": "object",
               "properties": {
-                "amount_requested": {
+                "amount_withdraw": {
                   "type": "number",
                   "example": 1
                 }
@@ -651,14 +651,14 @@
             "schema": {
               "type": "object",
               "properties": {
-                "amount_requested": {
+                "amount_withdraw": {
                   "type": "number",
                   "description": "Amount withdraw Request Sent succefully."
                 }
               }
             },
             "example": {
-              "amount_requested": 25.0
+              "amount_withdraw": 25.0
             }
           },
           "401": {
