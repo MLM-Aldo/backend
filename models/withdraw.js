@@ -33,7 +33,7 @@ withdrawSchema.pre("save", function (next) {
 });
 
 // Create a new model for the user schema
-const Withdraw = mongoose.model("Withdraw", withdrawSchema);
+const Withdraw = mongoose.model("withdraw", withdrawSchema);
 
 // Export the user model
 module.exports = Withdraw;
