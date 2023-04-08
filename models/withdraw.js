@@ -26,9 +26,9 @@ const withdrawSchema = new mongoose.Schema({
 });
 
 // Create a pre-save hook to generate a unique referral code for each new user
-fundSchema.pre("save", function (next) {
+withdrawSchema.pre("save", function (next) {
   const fund = this;
-  fund.transaction_id = 'TXN' + uuidv4();
+  withdraw.transaction_id = 'TXN' + uuidv4();
   next();
 });
 
