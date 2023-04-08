@@ -607,6 +607,92 @@
           }
         }
       }
+    },
+    "/users/{id}/Withdraw": {
+      "post": {
+        "tags": [
+          "Withdraw fund"
+        ],
+        "summary": "Withdraw fund from wallet",
+        "description": "Withdraw fund from wallet.",
+        "security": [
+          {
+            "myAuthorization": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "user id",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "amount_requested": {
+                  "type": "number",
+                  "example": 1
+                }
+              },
+              "required": [
+                "amount_withdraw"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "amount_requested": {
+                  "type": "number",
+                  "description": "Amount withdraw Request Sent succefully."
+                }
+              }
+            },
+            "example": {
+              "amount_requested": 25.0
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "description": "Error message indicating the reason for unauthorized access."
+                }
+              }
+            },
+            "example": {
+              "error": "Invalid token"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": {
+                  "type": "string",
+                  "description": "Error message indicating the cause of the server error."
+                }
+              }
+            },
+            "example": {
+              "error": "Database connection failed"
+            }
+          }
+        }
+      }
     }
   }
 }

@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/user");
 const Fund = require("../models/fund");
+const Withdraw = require("../models/withdraw");
 const { startJob, registerUserReferral } = require("../services/referral");
 const { v4: uuidv4 } = require('uuid');
 
@@ -222,5 +223,34 @@ exports.requestFund = async (req, res) => {
     return res
       .status(500)
       .json({ message: "Failed to add fund request: " + err.toString() });
+  });
+};
+exports.withdrawFund = async (req, res) => {
+  const { id } = req.params;
+  const { amount_withdraw } = req.body;
+
+  const user = await User.findById(id);
+
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  const user_id = id;
+  const amount_withdraw_status = "waiting";
+
+  const newFund = new Fund({
+    transaction_id: 'TXN' + uuidv4(),
+    user_id,
+    amount_withdraw,
+    amount_withdraw_status,
+  });
+  newFund.save().then(() => {
+    return res
+      .status(200)
+      .json({ message: "Withdraw Amount request sent successfully" });
+  }).catch((err)=>{
+    return res
+      .status(500)
+      .json({ message: "Failed to withdraw amount request: " + err.toString() });
   });
 };
