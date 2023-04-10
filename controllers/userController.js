@@ -268,9 +268,9 @@ exports.withdrawHistory = async (req, res) => {
 
 exports.requestFundHistory = async (req, res) => {
   try {
-    const withdrawLists = await withdraw.find({}, "");
+    const requiredFundLists = await Fund.find({}, "");
 
-    return res.status(200).json({ withdrawLists });
+    return res.status(200).json({ requiredFundLists });
   } catch (err) {
     res.status(500).send("Internal Server Error");
   }
