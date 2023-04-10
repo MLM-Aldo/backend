@@ -265,3 +265,13 @@ exports.withdrawHistory = async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 };
+
+exports.requestFundHistory = async (req, res) => {
+  try {
+    const withdrawLists = await withdraw.find({}, "");
+
+    return res.status(200).json({ withdrawLists });
+  } catch (err) {
+    res.status(500).send("Internal Server Error");
+  }
+};

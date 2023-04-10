@@ -714,6 +714,27 @@
           }
         }
       }
+    },
+    "/users/{id}/requestFundHistory": {
+      "get": {
+        "tags": ["request fund"],
+        "summary": "get all the request fund Of Users",
+        "description": "get all the request fund Of Users",
+        "security": [
+          {
+            "myAuthorization": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
     }
   }
 }
