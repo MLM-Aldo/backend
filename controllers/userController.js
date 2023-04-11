@@ -196,7 +196,7 @@ exports.toggleUserStatus = async (req, res) => {
   }
 };
 exports.toggleWithdrawStatus = async (req, res) => {
-  const { id } = req.params;
+  const { user_id } = req.params;
   const { amount_withdraw_status } = req.body;
 
   try {
