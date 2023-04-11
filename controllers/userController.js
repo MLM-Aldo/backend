@@ -197,18 +197,18 @@ exports.toggleUserStatus = async (req, res) => {
 };
 exports.toggleWithdrawStatus = async (req, res) => {
   const { id } = req.params;
-  const { waiting } = req.body;
+  const { amount_withdraw_status } = req.body;
 
   try {
-    const withdraw = await withdraw.findById(id);
-    if (!user) {
+    const Withdraw = await withdraw.findById(id);
+    if (!Withdraw) {
       return res.status(404).json({ message: "withdrawStatus not found" });
     }
 
-    withdraw.amount_request_status = req.body.newStatus;
-    await withdraw.save();
+    Withdraw.amount_withdraw_status = amount_withdraw_status;
+    await Withdraw.save();
 
-    res.status(200).json(withdrawStatus);
+    res.status(200).json(Withdraw);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Internal server error" });
