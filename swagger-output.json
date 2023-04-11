@@ -735,6 +735,56 @@
           }
         }
       }
+    },
+    "/users/{id}/withdrawStatus": {
+      "put": {
+        "tags": ["Withdraw History"],
+        "summary": "Update Withdraw status",
+        "description": "Toggle the active status of a user",
+        "security": [
+          {
+            "myAuthorization": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The ID of the user to update",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "active": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "active"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. The updated Withdraw History object is returned in the response body."
+          },
+          "404": {
+            "description": "The requested Withdraw was not found."
+          },
+          "500": {
+            "description": "Internal server error."
+            
+          }
+        }
+      }
     }
   }
 }
