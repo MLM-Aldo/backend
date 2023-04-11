@@ -196,16 +196,17 @@ exports.toggleUserStatus = async (req, res) => {
   }
 };
 exports.toggleWithdrawStatus = async (req, res) => {
+  const { id } = req.params;
   const { waiting } = req.body;
 
   try {
-    const withdrawStatus = await withdraw.amount_withdraw_status;
-    if (!withdrawStatus) {
+    const withdraw = await withdraw.findById(id);
+    if (!user) {
       return res.status(404).json({ message: "withdrawStatus not found" });
     }
 
-    withdrawStatus.waiting = waiting;
-    await withdrawStatus.save();
+    withdraw.amount_request_status = req.body.newStatus;
+    await withdraw.save();
 
     res.status(200).json(withdrawStatus);
   } catch (error) {
