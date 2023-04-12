@@ -6,6 +6,8 @@ const withdraw = require("../models/withdraw");
 const { startJob, registerUserReferral } = require("../services/referral");
 const { v4: uuidv4 } = require('uuid');
 const { body, param } = require('express-validator');
+const sanitizeHtml = require('sanitize-html');
+const { sanitize } = require('express-validator');
 
 const crypto = require('crypto');
 
@@ -19,7 +21,12 @@ const secretKey = process.env.SECRET_KEY || generateSecretKey();
 // use the secretKey to sign JWT tokens
 // ...
 
-
+exports.registerValidationRules = () => [
+  body('username').trim().escape(),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
+  body('email').isEmail().withMessage('Invalid email'),
+  body('phone').isMobilePhone().withMessage('Invalid phone number'),
+];
 exports.registerUser = (req, res) => {
   const { username, password, email, phone, referredBy } = req.body;
 
@@ -43,29 +50,16 @@ exports.registerUser = (req, res) => {
           referredBy,
         });
 
-        // sanitize user input
-        newUser.username = sanitize(newUser.username);
-        newUser.email = sanitize(newUser.email);
-        newUser.phone = sanitize(newUser.phone);
-
         // Save the new user object to the database
-        newUser
-          .save()
+        newUser.save()
           .then((user) => {
-            // sanitize user data before returning
-            user.username = sanitize(user.username);
-            user.email = sanitize(user.email);
-            user.phone = sanitize(user.phone);
-
             // add new user in referral collection
             return registerUserReferral(referredBy, user.referralCode);
           })
           .then(() => {
-            // If the user was saved successfully, return a success response
-            startJob({ newUser: userData, referredBy: referredBy }).then(() => {
-              return res
-                .status(200)
-                .json({ message: "User registered successfully", userData });
+            // If the user was saved successfully, start the job
+            startJob({ newUser, referredBy }).then(() => {
+              return res.status(200).json({ message: "User registered successfully", newUser });
             });
           })
           .catch((err) => {
@@ -118,32 +112,6 @@ exports.referrals = async (req, res) => {
 
 
 
-// exports.login = async (req, res) => {
-//   const { username, password } = req.body;
-
-//   try {
-//     const user = await User.findOne({ username });
-//     if (!user) {
-//       return res.status(401).send("Invalid username or password");
-//     }
-
-//     // Compare hashed password
-//     const match = await bcrypt.compare(password, user.password);
-//     if (!match) {
-//       return res.status(401).send("Invalid username or password");
-//     }
-
-//     // Generate JWT token
-//     const token = jwt.sign({ userId: user.id }, secretKey);
-
-//     // Return user and token
-//     return res.status(200).json({ message: "User logged in successfully", user, token });
-//   } catch (err) {
-//     console.error("Error finding user:", err);
-//     return res.status(500).send("Internal Server Error");
-//   }
-// };
-
 exports.login = async (req, res) => {
   const { username, password } = req.body;
 
@@ -152,24 +120,50 @@ exports.login = async (req, res) => {
     if (!user) {
       return res.status(401).send("Invalid username or password");
     }
-    if (user.password !== password) {
+
+    // Compare hashed password
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
       return res.status(401).send("Invalid username or password");
     }
 
-    if (user) {
-      const token = jwt.sign({ userId: user.id }, secretKey);
-      res.json({ user, token });
-      return res
-        .status(200)
-        .json({ message: "User logged in successfully", user });
-    } else {
-      return res.status(401).json({ message: "Invalid username or password" });
-    }
+    // Generate JWT token
+    const token = jwt.sign({ userId: user.id }, secretKey);
+
+    // Return user and token
+    return res.status(200).json({ message: "User logged in successfully", user, token });
   } catch (err) {
     console.error("Error finding user:", err);
     return res.status(500).send("Internal Server Error");
   }
 };
+
+// exports.login = async (req, res) => {
+//   const { username, password } = req.body;
+
+//   try {
+//     const user = await User.findOne({ username });
+//     if (!user) {
+//       return res.status(401).send("Invalid username or password");
+//     }
+//     if (user.password !== password) {
+//       return res.status(401).send("Invalid username or password");
+//     }
+
+//     if (user) {
+//       const token = jwt.sign({ userId: user.id }, secretKey);
+//       res.json({ user, token });
+//       return res
+//         .status(200)
+//         .json({ message: "User logged in successfully", user });
+//     } else {
+//       return res.status(401).json({ message: "Invalid username or password" });
+//     }
+//   } catch (err) {
+//     console.error("Error finding user:", err);
+//     return res.status(500).send("Internal Server Error");
+//   }
+// };
 
 exports.logout = async (req, res) => {
   return res.status(200).json({ message: "User logged out successfully" });
