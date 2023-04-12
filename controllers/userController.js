@@ -197,11 +197,11 @@ exports.toggleUserStatus = async (req, res) => {
 };
 exports.toggleWithdrawStatus = async (req, res) => {
   const { transaction_id } = req.params;
-  const { status } = req.body;
+  const { amount_withdraw_status } = req.body;
 
   try {
     // Find the withdrawal document by transaction ID
-    const withdrawal = await Withdraw.findOne({ transaction_id: transaction_id });
+    const withdrawal = await withdraw.findOne({ transaction_id: transaction_id });
 
     if (!withdrawal) {
       // Withdrawal not found
@@ -209,7 +209,7 @@ exports.toggleWithdrawStatus = async (req, res) => {
     }
 
     // Update the withdrawal document with the new amount_withdraw_status
-    withdrawal.amount_withdraw_status = status;
+    withdrawal.amount_withdraw_status = amount_withdraw_status;
 
     // Save the updated document to the database
     await withdrawal.save();
