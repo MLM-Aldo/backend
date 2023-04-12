@@ -116,31 +116,7 @@ exports.referrals = async (req, res) => {
   }
 };
 
-exports.login = async (req, res) => {
-  const { username, password } = req.body;
 
-  try {
-    const user = await User.findOne({ username });
-    if (!user) {
-      return res.status(401).send("Invalid username or password");
-    }
-
-    // Compare hashed password
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) {
-      return res.status(401).send("Invalid username or password");
-    }
-
-    // Generate JWT token
-    const token = jwt.sign({ userId: user.id }, secretKey);
-
-    // Return user and token
-    return res.status(200).json({ message: "User logged in successfully", user, token });
-  } catch (err) {
-    console.error("Error finding user:", err);
-    return res.status(500).send("Internal Server Error");
-  }
-};
 
 // exports.login = async (req, res) => {
 //   const { username, password } = req.body;
@@ -150,24 +126,50 @@ exports.login = async (req, res) => {
 //     if (!user) {
 //       return res.status(401).send("Invalid username or password");
 //     }
-//     if (user.password !== password) {
+
+//     // Compare hashed password
+//     const match = await bcrypt.compare(password, user.password);
+//     if (!match) {
 //       return res.status(401).send("Invalid username or password");
 //     }
 
-//     if (user) {
-//       const token = jwt.sign({ userId: user.id }, secretKey);
-//       res.json({ user, token });
-//       return res
-//         .status(200)
-//         .json({ message: "User logged in successfully", user });
-//     } else {
-//       return res.status(401).json({ message: "Invalid username or password" });
-//     }
+//     // Generate JWT token
+//     const token = jwt.sign({ userId: user.id }, secretKey);
+
+//     // Return user and token
+//     return res.status(200).json({ message: "User logged in successfully", user, token });
 //   } catch (err) {
 //     console.error("Error finding user:", err);
 //     return res.status(500).send("Internal Server Error");
 //   }
 // };
+
+exports.login = async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    const user = await User.findOne({ username });
+    if (!user) {
+      return res.status(401).send("Invalid username or password");
+    }
+    if (user.password !== password) {
+      return res.status(401).send("Invalid username or password");
+    }
+
+    if (user) {
+      const token = jwt.sign({ userId: user.id }, secretKey);
+      res.json({ user, token });
+      return res
+        .status(200)
+        .json({ message: "User logged in successfully", user });
+    } else {
+      return res.status(401).json({ message: "Invalid username or password" });
+    }
+  } catch (err) {
+    console.error("Error finding user:", err);
+    return res.status(500).send("Internal Server Error");
+  }
+};
 
 exports.logout = async (req, res) => {
   return res.status(200).json({ message: "User logged out successfully" });
