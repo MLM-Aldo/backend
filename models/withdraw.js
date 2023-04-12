@@ -18,7 +18,8 @@ const withdrawSchema = new mongoose.Schema({
     required: true,
   },
   amount_withdraw_status: {
-    type: String
+    type: String,
+    required: false,
   },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },
