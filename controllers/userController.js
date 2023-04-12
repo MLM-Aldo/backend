@@ -196,11 +196,11 @@ exports.toggleUserStatus = async (req, res) => {
   }
 };
 exports.toggleWithdrawStatus = async (req, res) => {
-  const { user_id } = req.params;
+  const { transaction_id } = req.params;
   const { amount_withdraw_status } = req.body;
 
   try {
-    const Withdraw = await withdraw.findOne({ _id: user_id });
+    const Withdraw = await withdraw.findOne({ _id: transaction_id });
     if (!Withdraw) {
       return res.status(404).json({ message: "withdrawStatus not found" });
     }
