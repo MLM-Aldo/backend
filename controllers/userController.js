@@ -1,11 +1,14 @@
+const bcrypt = require('bcrypt');
 const jwt = require("jsonwebtoken");
 const User = require("../models/user");
 const Fund = require("../models/fund");
 const withdraw = require("../models/withdraw");
 const { startJob, registerUserReferral } = require("../services/referral");
 const { v4: uuidv4 } = require('uuid');
+const { body, param } = require('express-validator');
 
 const crypto = require('crypto');
+
 
 const generateSecretKey = () => {
   return crypto.randomBytes(32).toString('hex');
@@ -26,44 +29,53 @@ exports.registerUser = (req, res) => {
         return res.status(400).json({ error: "Invalid referral code" });
       }
 
-      const newUser = new User({
-        username,
-        password,
-        email,
-        phone,
-        referredBy,
-      });
-
-      let userData = "";
-      // Save the new user object to the database
-      newUser
-        .save()
-        .then((user) => {
-          userData = user;
-          // add new user in referral collection
-          return registerUserReferral(referredBy, user.referralCode);
-        })
-        // .then(() => {
-        //   return referralController.updateReferralCount(referredBy)
-        // })
-        .then(() => {
-          delete user._doc.password;
-          delete user._doc.__v;
-
-          // If the user was saved successfully, return a success response
-          startJob({ newUser: userData, referredBy: referredBy }).then(() => {
-            return res
-              .status(200)
-              .json({ message: "User registered successfully", userData });
-          });
-        })
-        .catch((err) => {
-          // If there was an error saving the user, return an error response
+      // hash the password before saving
+      bcrypt.hash(password, 10, (err, hashedPassword) => {
+        if (err) {
           return res.status(500).json({ error: "Unable to register user" });
+        }
+
+        const newUser = new User({
+          username,
+          password: hashedPassword,
+          email,
+          phone,
+          referredBy,
         });
+
+        // sanitize user input
+        newUser.username = sanitize(newUser.username);
+        newUser.email = sanitize(newUser.email);
+        newUser.phone = sanitize(newUser.phone);
+
+        // Save the new user object to the database
+        newUser
+          .save()
+          .then((user) => {
+            // sanitize user data before returning
+            user.username = sanitize(user.username);
+            user.email = sanitize(user.email);
+            user.phone = sanitize(user.phone);
+
+            // add new user in referral collection
+            return registerUserReferral(referredBy, user.referralCode);
+          })
+          .then(() => {
+            // If the user was saved successfully, return a success response
+            startJob({ newUser: userData, referredBy: referredBy }).then(() => {
+              return res
+                .status(200)
+                .json({ message: "User registered successfully", userData });
+            });
+          })
+          .catch((err) => {
+            // If there was an error saving the user, return an error response
+            return res.status(500).json({ error: "Unable to register user" });
+          });
+      });
     })
     .catch((err) => {
-      // If there was an error checking the referral code or saving the user, return an error response
+      // If there was an error checking the referral code, return an error response
       return res.status(500).json({ error: "Unable to register user" });
     });
 };
@@ -112,18 +124,18 @@ exports.login = async (req, res) => {
     if (!user) {
       return res.status(401).send("Invalid username or password");
     }
-    if (user.password !== password) {
+
+    // Compare hashed password
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
       return res.status(401).send("Invalid username or password");
     }
 
-    if (user) {
-      const token = jwt.sign({ userId: user.id }, secretKey);
-      return res
-        .status(200)
-        .json({ message: "User logged in successfully", user, token });
-    } else {
-      return res.status(401).send("Invalid username or password");
-    }
+    // Generate JWT token
+    const token = jwt.sign({ userId: user.id }, secretKey);
+
+    // Return user and token
+    return res.status(200).json({ message: "User logged in successfully", user, token });
   } catch (err) {
     console.error("Error finding user:", err);
     return res.status(500).send("Internal Server Error");
@@ -169,12 +181,20 @@ exports.updatePassword = async (req, res) => {
     }
 
     // Check if the old password is correct
-    if (req.body.oldPassword != user.password) {
+    const isOldPasswordCorrect = await bcrypt.compare(
+      req.body.oldPassword,
+      user.password
+    );
+    if (!isOldPasswordCorrect) {
       return res.status(400).json({ error: "Invalid old password" });
     }
 
-    // update the user's password field
-    user.password = req.body.newPassword;
+    // Hash the new password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(req.body.newPassword, saltRounds);
+
+    // Update the user's password field with the hashed password
+    user.password = hashedPassword;
 
     // Save the updated user to the database
     await user.save();
@@ -186,33 +206,42 @@ exports.updatePassword = async (req, res) => {
   }
 };
 
-exports.updateUserData = async (req, res) => {
-  const { id } = req.params;
-  const { email, phone, username } = req.body;
+exports.updateUserData = [
+  param('id').isMongoId().withMessage('Invalid user ID'),
+  body('email').isEmail().withMessage('Invalid email'),
+  body('phone').isMobilePhone().withMessage('Invalid phone number'),
+  body('username')
+    .notEmpty().withMessage('Username is required')
+    .isLength({ min: 3 }).withMessage('Username should be at least 3 characters long')
+    .isAlphanumeric().withMessage('Username should only contain letters and numbers'),
+  async (req, res) => {
+    const { id } = req.params;
+    const { email, phone, username } = req.body;
 
-  try {
-    // Check if username is already taken
-    const existingUser = await User.findOne({ username });
-    if (existingUser && existingUser._id.toString() !== id) {
-      return res.status(409).json({ message: "Username is already taken" });
+    try {
+      // Check if username is already taken
+      const existingUser = await User.findOne({ username });
+      if (existingUser && existingUser._id.toString() !== id) {
+        return res.status(409).json({ message: "Username is already taken" });
+      }
+
+      const user = await User.findByIdAndUpdate(
+        id,
+        { email, phone, username },
+        { new: true }
+      );
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.status(200).json(user);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Internal server error" });
     }
-
-    const user = await User.findByIdAndUpdate(
-      id,
-      { email, phone, username },
-      { new: true }
-    );
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    res.status(200).json(user);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Internal server error" });
   }
-};
+];
 
 exports.toggleUserStatus = async (req, res) => {
   const { id } = req.params;
