@@ -196,16 +196,18 @@ exports.toggleUserStatus = async (req, res) => {
   }
 };
 exports.toggleWithdrawStatus = async (req, res) => {
-  const { transaction_id } = req.params;
-  const { amount_withdraw_status } = req.body;
-
+  const { user_id, transaction_id } = req.params;
   try {
-    const Withdraw = await withdraw.findOne({ _id: transaction_id });
-    if (!Withdraw) {
-      return res.status(404).json({ message: "withdrawStatus not found" });
+    // Find the withdrawal document in the database
+    const withdrawal = await Withdrawal.findById(transaction_id);
+    if (!withdrawal) {
+      return res.status(404).json({ message: 'Withdrawal not found' });
     }
 
-    Withdraw.amount_withdraw_status = amount_withdraw_status;
+    // Ensure that the withdrawal belongs to the user specified by user_id
+    if (withdrawal.userId !== user_id) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
     await Withdraw.save();
 
     res.status(200).json(Withdraw);
