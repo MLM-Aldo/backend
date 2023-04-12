@@ -5,6 +5,18 @@ const withdraw = require("../models/withdraw");
 const { startJob, registerUserReferral } = require("../services/referral");
 const { v4: uuidv4 } = require('uuid');
 
+const crypto = require('crypto');
+
+const generateSecretKey = () => {
+  return crypto.randomBytes(32).toString('hex');
+};
+
+const secretKey = process.env.SECRET_KEY || generateSecretKey();
+
+// use the secretKey to sign JWT tokens
+// ...
+
+
 exports.registerUser = (req, res) => {
   const { username, password, email, phone, referredBy } = req.body;
 
@@ -105,19 +117,45 @@ exports.login = async (req, res) => {
     }
 
     if (user) {
-      const token = jwt.sign({ userId: user.id }, process.env.SECRET_KEY);
-      res.json({ user, token });
+      const token = jwt.sign({ userId: user.id }, secretKey);
       return res
         .status(200)
-        .json({ message: "User logged in successfully", user });
+        .json({ message: "User logged in successfully", user, token });
     } else {
-      return res.status(401).json({ message: "Invalid username or password" });
+      return res.status(401).send("Invalid username or password");
     }
   } catch (err) {
     console.error("Error finding user:", err);
     return res.status(500).send("Internal Server Error");
   }
 };
+
+// exports.login = async (req, res) => {
+//   const { username, password } = req.body;
+
+//   try {
+//     const user = await User.findOne({ username });
+//     if (!user) {
+//       return res.status(401).send("Invalid username or password");
+//     }
+//     if (user.password !== password) {
+//       return res.status(401).send("Invalid username or password");
+//     }
+
+//     if (user) {
+//       const token = jwt.sign({ userId: user.id }, secretKey);
+//       res.json({ user, token });
+//       return res
+//         .status(200)
+//         .json({ message: "User logged in successfully", user });
+//     } else {
+//       return res.status(401).json({ message: "Invalid username or password" });
+//     }
+//   } catch (err) {
+//     console.error("Error finding user:", err);
+//     return res.status(500).send("Internal Server Error");
+//   }
+// };
 
 exports.logout = async (req, res) => {
   return res.status(200).json({ message: "User logged out successfully" });
