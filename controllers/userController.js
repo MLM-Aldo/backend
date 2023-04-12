@@ -206,6 +206,41 @@ exports.updatePassword = async (req, res) => {
   }
 };
 
+exports.resetPassword = async (req, res) => {
+  // Validate request body
+  await body('id').isMongoId().withMessage('Invalid user ID').run(req);
+  await body('newPassword').isLength({ min: 8 }).withMessage('New password must be at least 8 characters long').run(req);
+
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { id, newPassword } = req.body;
+
+  try {
+    // Find user by ID
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Hash and update new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    user.password = hashedPassword;
+
+    // Save updated user to database
+    await user.save();
+
+    return res.status(200).json({ message: 'Password reset successful' });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Server error' });
+  }
+};
+
+
 exports.updateUserData = [
   param('id').isMongoId().withMessage('Invalid user ID'),
   body('email').isEmail().withMessage('Invalid email'),
