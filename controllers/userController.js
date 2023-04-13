@@ -399,3 +399,19 @@ exports.requestFundHistory = async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 };
+
+// 1. Retrieve the withdraw amounts for each user from the database
+exports.totalApprovedWithdrawAmount = async (req, res) => {
+  try {
+    const withdrawAmounts = await withdraw.find({ amount_withdraw_status: 'Approved' }).select('amount_withdraw').exec();
+    
+    // 2. Calculate the sum of all the withdraw amounts
+    const totalWithdrawAmount = withdrawAmounts.reduce((total, user) => total + user.withdrawAmount, 0);
+    console.log(totalApprovedWithdrawAmount);
+    // 3. Return the total withdraw amount to the frontend
+    res.json({ totalWithdrawAmount });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+

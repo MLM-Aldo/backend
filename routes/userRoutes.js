@@ -20,6 +20,6 @@ router.get('/:id/withdrawHistory', userController.withdrawHistory);
 router.get('/:id/requestFundHistory', userController.requestFundHistory);
 router.put('/withdraw/transaction_id/:transaction_id/amount_withdraw_status', userController.toggleWithdrawStatus);
 router.post('/resetPassword', userController.resetPassword);
-
+router.get('/totalApprovedWithdrawAmount', userController.totalApprovedWithdrawAmount);
 // Export the user routes
 module.exports = router;
