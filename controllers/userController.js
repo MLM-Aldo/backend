@@ -407,9 +407,36 @@ exports.totalApprovedWithdrawAmount = async (req, res) => {
     
     // 2. Calculate the sum of all the withdraw amounts
     const totalApprovedWithdrawAmount = ApprovedWithdrawAmounts.reduce((total, user) => total + user.amount_withdraw, 0);
-    console.log(totalApprovedWithdrawAmount);
     // 3. Return the total withdraw amount to the frontend
     res.json({ totalApprovedWithdrawAmount });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// 1. Retrieve the withdraw amounts for each user from the database
+exports.totalPendingWithdrawAmount = async (req, res) => {
+  try {
+    const PendingWithdrawAmounts = await withdraw.find({ amount_withdraw_status: 'waiting' }).select('amount_withdraw').exec();
+    
+    // 2. Calculate the sum of all the withdraw amounts
+    const totalPendingWithdrawAmounts = PendingWithdrawAmounts.reduce((total, user) => total + user.amount_withdraw, 0);
+    // 3. Return the total withdraw amount to the frontend
+    res.json({ totalPendingWithdrawAmounts });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// 1. Retrieve the withdraw amounts for each user from the database
+exports.totalRejectedWithdrawAmount = async (req, res) => {
+  try {
+    const RejectedWithdrawAmounts = await withdraw.find({ amount_withdraw_status: 'Rejected' }).select('amount_withdraw').exec();
+    
+    // 2. Calculate the sum of all the withdraw amounts
+    const totalRejectedWithdrawAmount = RejectedWithdrawAmounts.reduce((total, user) => total + user.amount_withdraw, 0);
+    // 3. Return the total withdraw amount to the frontend
+    res.json({ totalRejectedWithdrawAmount });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
