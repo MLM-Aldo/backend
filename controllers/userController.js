@@ -403,10 +403,18 @@ exports.requestFundHistory = async (req, res) => {
 // 1. Retrieve the withdraw amounts for each user from the database
 exports.totalApprovedWithdrawAmount = async (req, res) => {
   try {
-    const ApprovedWithdrawAmounts = await withdraw.find({ amount_withdraw_status: 'Approved' }).select('amount_withdraw').exec();
+    // 1. Get the status parameter from the query string (defaults to 'Approved')
+    const amount_withdraw_status = req.query.amount_withdraw_status || 'waiting';
+    const ApprovedWithdrawAmounts = await withdraw.find({ amount_withdraw_status }).select('amount_withdraw user_id').exec();
     
     // 2. Calculate the sum of all the withdraw amounts
-    const totalApprovedWithdrawAmount = ApprovedWithdrawAmounts.reduce((total, user) => total + user.amount_withdraw, 0);
+    const totalApprovedWithdrawAmount = ApprovedWithdrawAmounts.reduce((total, withdraw) => total + withdraw.amount_withdraw, 0);
+
+    // 4. Update the wallet balance of each user who has a withdrawal request with the specified status
+    for (const withdraw of ApprovedWithdrawAmounts) {
+      const updatedUser = await User.findByIdAndUpdate(withdraw.user_id, { $inc: { walletBalance: -withdraw.wallet_balance } }, { new: true });
+    }
+
     // 3. Return the total withdraw amount to the frontend
     res.json({ totalApprovedWithdrawAmount });
   } catch (err) {
