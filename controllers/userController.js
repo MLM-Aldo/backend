@@ -9,6 +9,9 @@ const { body, param } = require('express-validator');
 const sanitizeHtml = require('sanitize-html');
 const { sanitize } = require('express-validator');
 
+const multer  = require('multer');
+const path = require('path');
+
 const crypto = require('crypto');
 
 
@@ -17,6 +20,18 @@ const generateSecretKey = () => {
 };
 
 const secretKey = process.env.SECRET_KEY || generateSecretKey();
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'contents/')
+  },
+  filename: function (req, file, cb) {
+    const fileName = `${Date.now()}-${file.originalname}`;
+    cb(null, fileName);
+  }
+});
+
+const upload = multer({ storage }).single('transaction');
 
 // use the secretKey to sign JWT tokens
 // ...
@@ -109,8 +124,6 @@ exports.referrals = async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 };
-
-
 
 exports.login = async (req, res) => {
   const { username, password } = req.body;
@@ -236,7 +249,6 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
-
 exports.updateUserData = [
   param('id').isMongoId().withMessage('Invalid user ID'),
   body('email').isEmail().withMessage('Invalid email'),
@@ -319,6 +331,17 @@ exports.toggleWithdrawStatus = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+exports.fileUpload = async (req, res) => {
+  const { id } = req.params;
+  upload(req, res, function (err) {
+    if (err) {
+      return res.end("Error uploading file.");
+    }
+
+    res.end("File is uploaded");
+  });
+}
 
 exports.requestFund = async (req, res) => {
   const { id } = req.params;
@@ -449,5 +472,3 @@ exports.totalRejectedWithdrawAmount = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
-

@@ -15,6 +15,7 @@ router.put('/:id/password', userController.updatePassword);
 router.put('/:id', userController.updateUserData);
 router.put('/:id/status', userController.toggleUserStatus);
 router.post('/:id/requestFund', userController.requestFund);
+router.post('/:id/fileUpload', userController.fileUpload);
 router.post('/:id/withdrawFund', userController.withdrawFund);
 router.get('/:id/withdrawHistory', userController.withdrawHistory);
 router.get('/:id/requestFundHistory', userController.requestFundHistory);
