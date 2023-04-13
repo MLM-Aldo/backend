@@ -21,5 +21,7 @@ router.get('/:id/requestFundHistory', userController.requestFundHistory);
 router.put('/withdraw/transaction_id/:transaction_id/amount_withdraw_status', userController.toggleWithdrawStatus);
 router.post('/resetPassword', userController.resetPassword);
 router.get('/totalApprovedWithdrawAmount', userController.totalApprovedWithdrawAmount);
+router.get('/totalPendingWithdrawAmount', userController.totalPendingWithdrawAmount);
+router.get('/totalRejectedWithdrawAmount', userController.totalRejectedWithdrawAmount);
 // Export the user routes
 module.exports = router;
