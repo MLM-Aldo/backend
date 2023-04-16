@@ -339,15 +339,21 @@ exports.requestFund = async (req, res) => {
     amount_requested,
     amount_request_status,
   });
-  newFund.save().then(() => {
+
+  const updatedWalletBalance = user.wallet_balance + amount_requested;
+  user.wallet_balance = updatedWalletBalance;
+
+  try {
+    await newFund.save();
+    await user.save();
     return res
       .status(200)
-      .json({ message: "Add fund request sent successfully" });
-  }).catch((err)=>{
+      .json({ message: "Add fund request sent successfully", updatedWalletBalance });
+  } catch (err) {
     return res
       .status(500)
       .json({ message: "Failed to add fund request: " + err.toString() });
-  });
+  }
 };
 
 exports.withdrawFund = async (req, res) => {
@@ -360,6 +366,10 @@ exports.withdrawFund = async (req, res) => {
     return res.status(404).json({ message: "User not found" });
   }
 
+  if (amount_withdraw > user.wallet_balance) {
+    return res.status(400).json({ message: "Insufficient balance" });
+  }
+
   const user_id = id;
   const amount_withdraw_status = "waiting";
 
@@ -369,16 +379,72 @@ exports.withdrawFund = async (req, res) => {
     amount_withdraw,
     amount_withdraw_status,
   });
-  newWithdraw.save().then(() => {
+
+  const updatedWalletBalance = user.wallet_balance - amount_withdraw;
+  user.wallet_balance = updatedWalletBalance;
+
+  try {
+    await newWithdraw.save();
+    await user.save();
     return res
       .status(200)
-      .json({ message: "Withdraw Amount request sent successfully" });
-  }).catch((err)=>{
+      .json({ message: "Withdraw amount request sent successfully", updatedWalletBalance });
+  } catch (err) {
     return res
       .status(500)
       .json({ message: "Failed to withdraw amount request: " + err.toString() });
-  });
+  }
 };
+
+exports.getBalance = async (req, res) => {
+  const { id } = req.params;
+
+  const user = await User.findById(id);
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  const funds = await Fund.aggregate([
+    {
+      $match: {
+        user_id: id,
+        amount_request_status: "approved",
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        total_amount: { $sum: "$amount_requested" },
+      },
+    },
+  ]);
+
+  const withdrawals = await Withdraw.aggregate([
+    {
+      $match: {
+        user_id: id,
+        amount_withdraw_status: "approved",
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        total_amount: { $sum: "$amount_withdraw" },
+      },
+    },
+  ]);
+
+  const referralBonus = user.referralBonus || 0;
+
+  const balance = {
+    available_balance: (funds.length ? funds[0].total_amount : 0) - (withdrawals.length ? withdrawals[0].total_amount : 0) + referralBonus,
+  };
+
+  return res.status(200).json(balance);
+};
+
+
+
 
 exports.withdrawHistory = async (req, res) => {
   try {
@@ -412,8 +478,13 @@ exports.totalApprovedWithdrawAmount = async (req, res) => {
 
     // 4. Update the wallet balance of each user who has a withdrawal request with the specified status
     for (const withdraw of ApprovedWithdrawAmounts) {
-      const updatedUser = await User.findByIdAndUpdate(withdraw.user_id, { $inc: { walletBalance: -withdraw.wallet_balance } }, { new: true });
+      const updatedUser = await User.findByIdAndUpdate(withdraw.user_id, { $inc: { walletBalance: - User.wallet_balance } }, { new: true });
     }
+
+     // 5. Calculate the sum of all wallet balances and update the value in the database
+    const allUsers = await User.find().select('wallet_balance').exec();
+    const totalWalletBalance = allUsers.reduce((total, user) => total + user.wallet_balance, 0);
+    await Wallet.findOneAndUpdate({}, { totalWalletBalance });
 
     // 3. Return the total withdraw amount to the frontend
     res.json({ totalApprovedWithdrawAmount });
@@ -447,6 +518,16 @@ exports.totalRejectedWithdrawAmount = async (req, res) => {
     res.json({ totalRejectedWithdrawAmount });
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getTotalWalletBalance = async (req, res) => {
+  try {
+    const users = await User.find({}, { wallet_balance: 1, _id: 0 });
+    const totalWalletBalance = users.reduce((total, user) => total + user.wallet_balance, 0);
+    return res.status(200).json({ totalWalletBalance });
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to get total wallet balance: " + err.toString() });
   }
 };
 

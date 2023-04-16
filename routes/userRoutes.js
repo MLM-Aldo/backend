@@ -23,5 +23,7 @@ router.post('/resetPassword', userController.resetPassword);
 router.get('/totalApprovedWithdrawAmount', userController.totalApprovedWithdrawAmount);
 router.get('/totalPendingWithdrawAmount', userController.totalPendingWithdrawAmount);
 router.get('/totalRejectedWithdrawAmount', userController.totalRejectedWithdrawAmount);
+router.get('/:id/getBalance', userController.getBalance);
+router.get('/wallet-balances', userController.getTotalWalletBalance);
 // Export the user routes
 module.exports = router;

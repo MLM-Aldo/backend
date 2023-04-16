@@ -30,6 +30,10 @@ const userSchema = new mongoose.Schema({
   active: {type: Boolean, default: true},
   isAdmin: {type: Boolean, default: false},
   created_at: { type: Date, default: Date.now },
+  wallet_balance: {
+    type: String,
+    required: true,
+  }
 });
 
 
