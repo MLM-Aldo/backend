@@ -8,6 +8,7 @@ const { v4: uuidv4 } = require('uuid');
 const { body, param } = require('express-validator');
 const sanitizeHtml = require('sanitize-html');
 const { sanitize } = require('express-validator');
+const crypto = require('crypto');
 
 const generateSecretKey = () => {
   return crypto.randomBytes(32).toString('hex');
