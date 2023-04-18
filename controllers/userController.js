@@ -24,11 +24,12 @@ const secretKey = process.env.SECRET_KEY || generateSecretKey();
 exports.registerValidationRules = () => [
   body('username').trim().escape(),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
+  body('transaction_password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long'),
   body('email').isEmail().withMessage('Invalid email'),
   body('phone').isMobilePhone().withMessage('Invalid phone number'),
 ];
 exports.registerUser = (req, res) => {
-  const { username, password, email, phone, referredBy } = req.body;
+  const { username, password, transaction_password, email, phone, referredBy } = req.body;
 
   User.findOne({ referralCode: referredBy, active: true })
     .then((existingUser) => {
@@ -42,9 +43,15 @@ exports.registerUser = (req, res) => {
           return res.status(500).json({ error: "Unable to register user" });
         }
 
+        // Encrypt the master password
+    const cipher = crypto.createCipheriv('aes-256-cbc', transactionPassword);
+    let encryptedTransactionPassword = cipher.update(req.body.transactionPassword, 'utf8', 'hex');
+    encryptedTransactionPassword += cipher.final('hex');
+
         const newUser = new User({
           username,
           password: hashedPassword,
+          encryptedTransactionPassword,
           email,
           phone,
           referredBy,
