@@ -22,11 +22,7 @@ const withdrawSchema = new mongoose.Schema({
     required: true,
   },
   created_at: { type: Date, default: Date.now },
-  updated_at: { type: Date, default: Date.now },
-  wallet_balance: {
-    type: String,
-    required: true,
-  }
+  updated_at: { type: Date, default: Date.now }
 });
 
 // Create a pre-save hook to generate a unique referral code for each new user

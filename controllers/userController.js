@@ -14,7 +14,6 @@ const path = require('path');
 
 const crypto = require('crypto');
 
-
 const generateSecretKey = () => {
   return crypto.randomBytes(32).toString('hex');
 };
@@ -39,11 +38,13 @@ const upload = multer({ storage }).single('transaction');
 exports.registerValidationRules = () => [
   body('username').trim().escape(),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
+  body('transactionPassword').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long'),
   body('email').isEmail().withMessage('Invalid email'),
   body('phone').isMobilePhone().withMessage('Invalid phone number'),
 ];
+
 exports.registerUser = (req, res) => {
-  const { username, password, email, phone, referredBy } = req.body;
+  const { username, password, transactionPassword, email, phone, referredBy } = req.body;
 
   User.findOne({ referralCode: referredBy, active: true })
     .then((existingUser) => {
@@ -51,36 +52,43 @@ exports.registerUser = (req, res) => {
         return res.status(400).json({ error: "Invalid referral code" });
       }
 
-      // hash the password before saving
+      // Hash the password before saving
       bcrypt.hash(password, 10, (err, hashedPassword) => {
         if (err) {
           return res.status(500).json({ error: "Unable to register user" });
         }
 
-        const newUser = new User({
-          username,
-          password: hashedPassword,
-          email,
-          phone,
-          referredBy,
-        });
+        // Hash the transaction password before saving
+        bcrypt.hash(transactionPassword, 10, (err, hashedTransactionPassword) => {
+          if (err) {
+            return res.status(500).json({ error: "Unable to Register User" });
+          }
 
-        // Save the new user object to the database
-        newUser.save()
-          .then((user) => {
-            // add new user in referral collection
-            return registerUserReferral(referredBy, user.referralCode);
-          })
-          .then(() => {
-            // If the user was saved successfully, start the job
-            startJob({ newUser, referredBy }).then(() => {
-              return res.status(200).json({ message: "User registered successfully", newUser });
-            });
-          })
-          .catch((err) => {
-            // If there was an error saving the user, return an error response
-            return res.status(500).json({ error: "Unable to register user" });
+          const newUser = new User({
+            username,
+            password: hashedPassword,
+            transactionPassword: hashedTransactionPassword,
+            email,
+            phone,
+            referredBy,
           });
+          // Save the new user object to the database
+          newUser.save()
+            .then((user) => {
+              // add new user in referral collection
+              return registerUserReferral(referredBy, user.referralCode);
+            })
+            .then(() => {
+              // If the user was saved successfully, start the job
+              startJob({ newUser, referredBy }).then(() => {
+                return res.status(200).json({ message: "User registered successfully", newUser });
+              });
+            })
+            .catch((err) => {
+              // If there was an error saving the user, return an error response
+              return res.status(500).json({ error: "Unable to register user successfuly" });
+            });
+        });
       });
     })
     .catch((err) => {
@@ -362,15 +370,21 @@ exports.requestFund = async (req, res) => {
     amount_requested,
     amount_request_status,
   });
-  newFund.save().then(() => {
+
+  const updatedWalletBalance = user.wallet_balance + amount_requested;
+  user.wallet_balance = updatedWalletBalance;
+
+  try {
+    await newFund.save();
+    await user.save();
     return res
       .status(200)
-      .json({ message: "Add fund request sent successfully" });
-  }).catch((err)=>{
+      .json({ message: "Add fund request sent successfully", updatedWalletBalance });
+  } catch (err) {
     return res
       .status(500)
       .json({ message: "Failed to add fund request: " + err.toString() });
-  });
+  }
 };
 
 exports.withdrawFund = async (req, res) => {
@@ -383,6 +397,10 @@ exports.withdrawFund = async (req, res) => {
     return res.status(404).json({ message: "User not found" });
   }
 
+  if (amount_withdraw > user.wallet_balance) {
+    return res.status(400).json({ message: "Insufficient balance" });
+  }
+
   const user_id = id;
   const amount_withdraw_status = "waiting";
 
@@ -392,16 +410,72 @@ exports.withdrawFund = async (req, res) => {
     amount_withdraw,
     amount_withdraw_status,
   });
-  newWithdraw.save().then(() => {
+
+  const updatedWalletBalance = user.wallet_balance - amount_withdraw;
+  user.wallet_balance = updatedWalletBalance;
+
+  try {
+    await newWithdraw.save();
+    await user.save();
     return res
       .status(200)
-      .json({ message: "Withdraw Amount request sent successfully" });
-  }).catch((err)=>{
+      .json({ message: "Withdraw amount request sent successfully", updatedWalletBalance });
+  } catch (err) {
     return res
       .status(500)
       .json({ message: "Failed to withdraw amount request: " + err.toString() });
-  });
+  }
 };
+
+exports.getBalance = async (req, res) => {
+  const { id } = req.params;
+
+  const user = await User.findById(id);
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  const funds = await Fund.aggregate([
+    {
+      $match: {
+        user_id: id,
+        amount_request_status: "approved",
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        total_amount: { $sum: "$amount_requested" },
+      },
+    },
+  ]);
+
+  const withdrawals = await Withdraw.aggregate([
+    {
+      $match: {
+        user_id: id,
+        amount_withdraw_status: "approved",
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        total_amount: { $sum: "$amount_withdraw" },
+      },
+    },
+  ]);
+
+  const referralBonus = user.referralBonus || 0;
+
+  const balance = {
+    available_balance: (funds.length ? funds[0].total_amount : 0) - (withdrawals.length ? withdrawals[0].total_amount : 0) + referralBonus,
+  };
+
+  return res.status(200).json(balance);
+};
+
+
+
 
 exports.withdrawHistory = async (req, res) => {
   try {
@@ -435,8 +509,13 @@ exports.totalApprovedWithdrawAmount = async (req, res) => {
 
     // 4. Update the wallet balance of each user who has a withdrawal request with the specified status
     for (const withdraw of ApprovedWithdrawAmounts) {
-      const updatedUser = await User.findByIdAndUpdate(withdraw.user_id, { $inc: { walletBalance: -withdraw.wallet_balance } }, { new: true });
+      const updatedUser = await User.findByIdAndUpdate(withdraw.user_id, { $inc: { walletBalance: - User.wallet_balance } }, { new: true });
     }
+
+     // 5. Calculate the sum of all wallet balances and update the value in the database
+    const allUsers = await User.find().select('wallet_balance').exec();
+    const totalWalletBalance = allUsers.reduce((total, user) => total + user.wallet_balance, 0);
+    await Wallet.findOneAndUpdate({}, { totalWalletBalance });
 
     // 3. Return the total withdraw amount to the frontend
     res.json({ totalApprovedWithdrawAmount });
@@ -472,3 +551,42 @@ exports.totalRejectedWithdrawAmount = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+exports.getTotalWalletBalance = async (req, res) => {
+  try {
+    const users = await User.find({}, { wallet_balance: 1, _id: 0 });
+    const totalWalletBalance = users.reduce((total, user) => total + user.wallet_balance, 0);
+    return res.status(200).json({ totalWalletBalance });
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to get total wallet balance: " + err.toString() });
+  }
+};
+
+
+exports.checkTransactionPassword = async (req, res) => {
+  const { username, transactionPassword } = req.body;
+
+  try {
+    const user = await User.findOne({ username });
+    if (!user) {
+      return res.status(401).send("Invalid username or password");
+    }
+
+    // Compare hashed password
+    const match = await bcrypt.compare(transactionPassword, user.transactionPassword);
+    if (!match) {
+      return res.status(401).send("Invalid username or password");
+    }
+
+    // Generate JWT token
+    const token = jwt.sign({ userId: user.id }, secretKey);
+
+    // Return user and token
+    return res.status(200).json({ message: "User logged in successfully", user, token });
+  } catch (err) {
+    console.error("Error finding user:", err);
+    return res.status(500).send("Internal Server Error");
+  }
+};
+
+
