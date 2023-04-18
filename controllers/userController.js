@@ -541,20 +541,28 @@ exports.getTotalWalletBalance = async (req, res) => {
 
 exports.checkTransactionPassword = async (req, res) => {
   const { transactionPassword } = req.body;
+  const userId = req.User._id; // assuming the user ID is stored in the "id" field of the "req.user" object
 
   try {
+    // Retrieve user from the database
+    const user = await User.findById(userId);
+    console.log(user);
+    if (!user) {
+      return res.status(401).send("User not found");
+    }
 
     // Compare hashed password
-    const match = await bcrypt.compare(transactionPassword, User.transactionPassword);
+    const match = await bcrypt.compare(transactionPassword, user.transactionPassword);
     if (!match) {
       return res.status(401).send("Invalid transaction Password");
     }
 
-    // Return user and token
-    return res.status(200).json({ message: "Transaction Password ma"});
+    // Return success response
+    return res.status(200).json({ message: "Transaction Password verified" });
   } catch (err) {
     console.error("Error finding user:", err);
     return res.status(500).send("Internal Server Error");
   }
 };
+
 
