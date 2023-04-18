@@ -30,6 +30,9 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  walletBalance: {
+    type: Number
+  },
   referralCode: { type: String, unique: true },
   active: {type: Boolean, default: true},
   isAdmin: {type: Boolean, default: false},

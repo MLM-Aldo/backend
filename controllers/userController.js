@@ -71,6 +71,7 @@ exports.registerUser = (req, res) => {
             email,
             phone,
             referredBy,
+            walletBalance:0
           });
           // Save the new user object to the database
           newUser.save()
