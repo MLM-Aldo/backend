@@ -25,5 +25,6 @@ router.get('/totalPendingWithdrawAmount', userController.totalPendingWithdrawAmo
 router.get('/totalRejectedWithdrawAmount', userController.totalRejectedWithdrawAmount);
 router.get('/:id/getBalance', userController.getBalance);
 router.get('/wallet-balances', userController.getTotalWalletBalance);
+router.get('/:id/transactionPassword', userController.checkTransactionPassword);
 // Export the user routes
 module.exports = router;
