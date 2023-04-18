@@ -12,7 +12,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  transaction_password:{
+  transactionPassword:{
     type: String,
     required: true,
   },
@@ -34,10 +34,6 @@ const userSchema = new mongoose.Schema({
   active: {type: Boolean, default: true},
   isAdmin: {type: Boolean, default: false},
   created_at: { type: Date, default: Date.now },
-  wallet_balance: {
-    type: String,
-    required: true,
-  }
 });
 
 

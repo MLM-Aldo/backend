@@ -22,13 +22,13 @@ const secretKey = process.env.SECRET_KEY || generateSecretKey();
 exports.registerValidationRules = () => [
   body('username').trim().escape(),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
-  body('transaction_password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long'),
+  body('transactionPassword').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long'),
   body('email').isEmail().withMessage('Invalid email'),
   body('phone').isMobilePhone().withMessage('Invalid phone number'),
 ];
 
 exports.registerUser = (req, res) => {
-  const { username, password, transaction_password, email, phone, referredBy } = req.body;
+  const { username, password, transactionPassword, email, phone, referredBy } = req.body;
 
   User.findOne({ referralCode: referredBy, active: true })
     .then((existingUser) => {
@@ -43,20 +43,19 @@ exports.registerUser = (req, res) => {
         }
 
         // Hash the transaction password before saving
-        bcrypt.hash(transaction_password, 10, (err, hashedTransactionPassword) => {
+        bcrypt.hash(transactionPassword, 10, (err, hashedTransactionPassword) => {
           if (err) {
-            return res.status(500).json({ error: "Unable to register user" });
+            return res.status(500).json({ error: "Unable to Register User" });
           }
 
           const newUser = new User({
             username,
             password: hashedPassword,
-            transaction_password: hashedTransactionPassword,
+            transactionPassword: hashedTransactionPassword,
             email,
             phone,
             referredBy,
           });
-
           // Save the new user object to the database
           newUser.save()
             .then((user) => {
@@ -71,7 +70,7 @@ exports.registerUser = (req, res) => {
             })
             .catch((err) => {
               // If there was an error saving the user, return an error response
-              return res.status(500).json({ error: "Unable to register user" });
+              return res.status(500).json({ error: "Unable to register user successfuly" });
             });
         });
       });
