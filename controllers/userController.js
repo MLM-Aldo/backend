@@ -9,9 +9,6 @@ const { body, param } = require('express-validator');
 const sanitizeHtml = require('sanitize-html');
 const { sanitize } = require('express-validator');
 
-const crypto = require('crypto');
-
-
 const generateSecretKey = () => {
   return crypto.randomBytes(32).toString('hex');
 };
@@ -28,6 +25,7 @@ exports.registerValidationRules = () => [
   body('email').isEmail().withMessage('Invalid email'),
   body('phone').isMobilePhone().withMessage('Invalid phone number'),
 ];
+
 exports.registerUser = (req, res) => {
   const { username, password, transaction_password, email, phone, referredBy } = req.body;
 
@@ -37,42 +35,44 @@ exports.registerUser = (req, res) => {
         return res.status(400).json({ error: "Invalid referral code" });
       }
 
-      // hash the password before saving
+      // Hash the password before saving
       bcrypt.hash(password, 10, (err, hashedPassword) => {
         if (err) {
           return res.status(500).json({ error: "Unable to register user" });
         }
 
-        // Encrypt the master password
-    const cipher = crypto.createCipheriv('aes-256-cbc', transactionPassword);
-    let encryptedTransactionPassword = cipher.update(req.body.transactionPassword, 'utf8', 'hex');
-    encryptedTransactionPassword += cipher.final('hex');
-
-        const newUser = new User({
-          username,
-          password: hashedPassword,
-          encryptedTransactionPassword,
-          email,
-          phone,
-          referredBy,
-        });
-
-        // Save the new user object to the database
-        newUser.save()
-          .then((user) => {
-            // add new user in referral collection
-            return registerUserReferral(referredBy, user.referralCode);
-          })
-          .then(() => {
-            // If the user was saved successfully, start the job
-            startJob({ newUser, referredBy }).then(() => {
-              return res.status(200).json({ message: "User registered successfully", newUser });
-            });
-          })
-          .catch((err) => {
-            // If there was an error saving the user, return an error response
+        // Hash the transaction password before saving
+        bcrypt.hash(transaction_password, 10, (err, hashedTransactionPassword) => {
+          if (err) {
             return res.status(500).json({ error: "Unable to register user" });
+          }
+
+          const newUser = new User({
+            username,
+            password: hashedPassword,
+            transaction_password: hashedTransactionPassword,
+            email,
+            phone,
+            referredBy,
           });
+
+          // Save the new user object to the database
+          newUser.save()
+            .then((user) => {
+              // add new user in referral collection
+              return registerUserReferral(referredBy, user.referralCode);
+            })
+            .then(() => {
+              // If the user was saved successfully, start the job
+              startJob({ newUser, referredBy }).then(() => {
+                return res.status(200).json({ message: "User registered successfully", newUser });
+              });
+            })
+            .catch((err) => {
+              // If there was an error saving the user, return an error response
+              return res.status(500).json({ error: "Unable to register user" });
+            });
+        });
       });
     })
     .catch((err) => {
