@@ -540,25 +540,25 @@ exports.getTotalWalletBalance = async (req, res) => {
 
 
 exports.checkTransactionPassword = async (req, res) => {
-  const { transactionPassword } = req.body;
-  const userId = req.User._id; // assuming the user ID is stored in the "id" field of the "req.user" object
+  const { username, transactionPassword } = req.body;
 
   try {
-    // Retrieve user from the database
-    const user = await User.findById(userId);
-    console.log(user);
+    const user = await User.findOne({ username });
     if (!user) {
-      return res.status(401).send("User not found");
+      return res.status(401).send("Invalid username or password");
     }
 
     // Compare hashed password
     const match = await bcrypt.compare(transactionPassword, user.transactionPassword);
     if (!match) {
-      return res.status(401).send("Invalid transaction Password");
+      return res.status(401).send("Invalid username or password");
     }
 
-    // Return success response
-    return res.status(200).json({ message: "Transaction Password verified" });
+    // Generate JWT token
+    const token = jwt.sign({ userId: user.id }, secretKey);
+
+    // Return user and token
+    return res.status(200).json({ message: "User logged in successfully", user, token });
   } catch (err) {
     console.error("Error finding user:", err);
     return res.status(500).send("Internal Server Error");
