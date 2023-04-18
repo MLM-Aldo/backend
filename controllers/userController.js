@@ -573,16 +573,18 @@ exports.checkTransactionPassword = async (req, res) => {
     }
 
     // Compare hashed password
-    const match = await bcrypt.compare(transactionPassword, user.transactionPassword);
+    const match = await bcrypt.compare(
+      transactionPassword,
+      user.transactionPassword
+    );
     if (!match) {
       return res.status(401).send("Invalid username or password");
     }
 
-    // Generate JWT token
-    const token = jwt.sign({ userId: user.id }, secretKey);
-
-    // Return user and token
-    return res.status(200).json({ message: "User logged in successfully", user, token });
+    // Return user 
+    return res
+      .status(200)
+      .json({ message: "User verified successfully", user });
   } catch (err) {
     console.error("Error finding user:", err);
     return res.status(500).send("Internal Server Error");
