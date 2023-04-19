@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/user");
 const Fund = require("../models/fund");
 const withdraw = require("../models/withdraw");
+const UsersTransactions = require("../models/usersTransaction");
 const { startJob, registerUserReferral } = require("../services/referral");
 const { v4: uuidv4 } = require('uuid');
 const { body, param } = require('express-validator');
@@ -587,9 +588,54 @@ exports.checkTransactionPassword = async (req, res) => {
       .status(200)
       .json({ message: "User verified successfully", user });
   } catch (err) {
-    console.error("Error finding user:", err);
     return res.status(500).send("Internal Server Error");
   }
 };
 
+//Users to User Transaction 
+exports.UsersTransactions= async (req, res) => {
+  const { id } = req.params;
+  const { sender_id, reciever_id, sent_amount } = req.body;
 
+  const user = await User.findById(id);
+
+  // Find the sender and receiver in the array of users
+  const sender = await User.find(user => user._id === sender_id);
+  const receiver = await User.find(user => user._id === receiver_id);
+
+  // Check if the sender and receiver exist
+  if (!sender || !receiver) {
+    return res.status(404).json({ message: 'User not found.' });
+  }
+
+  const user_id = id;
+
+  const newUserTransaction = new UsersTransactions({
+    transaction_id: 'TXN' + uuidv4(),
+    user_id,
+    sender_id,
+    reciever_id,
+    sent_amount,
+  });
+
+  // Check if the sender has enough balance
+  if (sender.walletBalance < amount) {
+    return res.status(400).json({ message: 'Insufficient balance.' });
+  }
+
+  // Update the balances of the sender and receiver
+  sender.walletBalance -= sent_amount;
+  receiver.walletBalance += sent_amount;
+
+  try {
+    await newUserTransaction.save();
+    await user.save();
+    return res
+      .status(200)
+      .json({ message: "Amount sent successfully", updatedWalletBalance });
+  } catch (err) {
+    return res
+      .status(500)
+      .json({ message: "Failed to send amount: " + err.toString() });
+  }
+};
