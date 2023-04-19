@@ -601,7 +601,7 @@ exports.UsersTransactions= async (req, res) => {
 
   // Find the sender and receiver in the array of users
   const sender = await User.find(user => user._id === sender_id);
-  const receiver = await User.find(user => user._id === receiver_id);
+  const receiver = await User.find(user => user._id === reciever_id);
 
   // Check if the sender and receiver exist
   if (!sender || !receiver) {
