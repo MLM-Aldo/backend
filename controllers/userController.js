@@ -593,15 +593,15 @@ exports.checkTransactionPassword = async (req, res) => {
 };
 
 //Users to User Transaction 
-exports.UsersTransactions= async (req, res) => {
+exports.usersTransactions = async (req, res) => {
   const { id } = req.params;
-  const { sender_id, reciever_id, sent_amount } = req.body;
+  const { sender_id, receiver_id, sent_amount } = req.body;
 
   const user = await User.findById(id);
 
-  // Find the sender and receiver in the array of users
-  const sender = await User.find(user => user._id === sender_id);
-  const receiver = await User.find(user => user._id === reciever_id);
+  // Find the sender and receiver
+  const sender = await User.findById(sender_id);
+  const receiver = await User.findById(receiver_id);
 
   // Check if the sender and receiver exist
   if (!sender || !receiver) {
@@ -614,12 +614,12 @@ exports.UsersTransactions= async (req, res) => {
     transaction_id: 'TXN' + uuidv4(),
     user_id,
     sender_id,
-    reciever_id,
+    receiver_id,
     sent_amount,
   });
 
   // Check if the sender has enough balance
-  if (sender.walletBalance < amount) {
+  if (sender.walletBalance < sent_amount) {
     return res.status(400).json({ message: 'Insufficient balance.' });
   }
 
@@ -629,13 +629,17 @@ exports.UsersTransactions= async (req, res) => {
 
   try {
     await newUserTransaction.save();
-    await user.save();
-    return res
-      .status(200)
-      .json({ message: "Amount sent successfully", updatedWalletBalance });
+    await sender.save();
+    await receiver.save();
+    return res.status(200).json({
+      message: 'Amount sent successfully',
+      senderWalletBalance: sender.walletBalance,
+      receiverWalletBalance: receiver.walletBalance,
+    });
   } catch (err) {
     return res
       .status(500)
-      .json({ message: "Failed to send amount: " + err.toString() });
+      .json({ message: 'Failed to send amount: ' + err.toString() });
   }
 };
+
