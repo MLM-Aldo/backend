@@ -600,8 +600,8 @@ exports.usersTransactions = async (req, res) => {
   const user = await User.findById(id);
 
   // Find the sender and receiver
-  const sender = await User.findById(username);
-  const receiver = await User.findById(username);
+  const sender = await User.findById(id);
+  const receiver = await User.findById(id);
 
   // Check if the sender and receiver exist
   if (!sender || !receiver) {
