@@ -595,17 +595,14 @@ exports.checkTransactionPassword = async (req, res) => {
 //Users to User Transaction 
 exports.usersTransactions = async (req, res) => {
   const { id } = req.params;
-  const { sender_id, receiver_id, sent_amount } = req.body;
+  const { receiver_id, sent_amount } = req.body;
 
   const user = await User.findById(id);
 
-  // Find the sender and receiver
-  const sender = await User.findById(id);
-  const receiver = await User.findById(id);
-
-  // Check if the sender and receiver exist
-  if (!sender || !receiver) {
-    return res.status(404).json({ message: 'User not found.' });
+  // Check if the receiver exists
+  const receiver = await User.findById(receiver_id);
+  if (!receiver) {
+    return res.status(404).json({ message: 'Receiver not found.' });
   }
 
   const user_id = id;
@@ -613,27 +610,26 @@ exports.usersTransactions = async (req, res) => {
   const newUserTransaction = new UsersTransactions({
     transaction_id: 'TXN' + uuidv4(),
     user_id,
-    sender_id,
     receiver_id,
     sent_amount,
   });
 
-  // Check if the sender has enough balance
-  if (sender.walletBalance < sent_amount) {
+  // Check if the user has enough balance
+  if (user.walletBalance < sent_amount) {
     return res.status(400).json({ message: 'Insufficient balance.' });
   }
 
-  // Update the balances of the sender and receiver
-  sender.walletBalance -= sent_amount;
+  // Update the balances of the user and receiver
+  user.walletBalance -= sent_amount;
   receiver.walletBalance += sent_amount;
 
   try {
     await newUserTransaction.save();
-    await sender.save();
+    await user.save();
     await receiver.save();
     return res.status(200).json({
       message: 'Amount sent successfully',
-      senderWalletBalance: sender.walletBalance,
+      userWalletBalance: user.walletBalance,
       receiverWalletBalance: receiver.walletBalance,
     });
   } catch (err) {
@@ -642,4 +638,5 @@ exports.usersTransactions = async (req, res) => {
       .json({ message: 'Failed to send amount: ' + err.toString() });
   }
 };
+
 
