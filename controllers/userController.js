@@ -4,7 +4,7 @@ const User = require("../models/user");
 const Fund = require("../models/fund");
 const withdraw = require("../models/withdraw");
 const UsersTransactions = require("../models/usersTransaction");
-const { startJob, registerUserReferral } = require("../services/referral");
+const { startActivationJob, registerUserReferral } = require("../services/referral");
 const { v4: uuidv4 } = require('uuid');
 const { body, param } = require('express-validator');
 const sanitizeHtml = require('sanitize-html');
@@ -82,7 +82,7 @@ exports.registerUser = (req, res) => {
             })
             .then(() => {
               // If the user was saved successfully, start the job
-              startJob({ newUser, referredBy }).then(() => {
+              startActivationJob({ newUser, referredBy }).then(() => {
                 return res.status(200).json({ message: "User registered successfully", newUser });
               });
             })
