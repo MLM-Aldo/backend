@@ -14,6 +14,9 @@ const referralSchema = new mongoose.Schema({
   level3 :  {type: Number , default: 0},
   level4 :  {type: Number , default: 0},
   level5 :  {type: Number , default: 0},
+  level6 :  {type: Number , default: 0},
+  level7 :  {type: Number , default: 0},
+  level8 :  {type: Number , default: 0},
   referralBonus: {type: Number, default: 0},
   totalBonus: {type: Number, default: 0},
 });

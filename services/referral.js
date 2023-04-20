@@ -1,9 +1,135 @@
+// Import Mongoose and the Referral model
+const mongoose = require('mongoose');
+const Referral = require('../models/referral');
+
+// Calculate referral bonus based on referral hierarchy and registration amount
+// function calculateReferralBonus(referrer, referredBy, registrationAmount, referralSystem) {
+//   const levels = referredBy.split(',');
+//   let bonus = 0;
+//   let level1Count = 0;
+
+//   for (let i = 0; i < levels.length; i++) {
+//     const level = i + 1;
+//     const referrerLevel = levels[i];
+
+//     if (level === 1) {
+//       level1Count++;
+//     }
+
+//     if (referralSystem.hasOwnProperty(`level${level}`) && referralSystem[`level${level}`] > 0) {
+//       bonus += registrationAmount * referralSystem[`level${level}`];
+//     }
+//   }
+
+//   if (level1Count < 4) {
+//     return null;
+//   }
+
+//   return bonus;
+// }
+
+// // Export service functions
+// module.exports = {
+//   // Create a new referral document with the given data
+//   async createReferral(referrer, referralCode, referredBy) {
+//     const referral = new Referral({
+//       referredBy,
+//       referralCode,
+//     });
+
+//     try {
+//       await referral.save();
+
+//       // Calculate and update referral bonus for referrer
+//       const referralSystem = {
+//         level1: 0.25,
+//         level2: 0.04,
+//         level3: 0.03,
+//         level4: 0.02,
+//         level5: 0.01,        
+//       };
+      
+//       const bonus = calculateReferralBonus(referrer, referredBy, referral.registrationAmount, referralSystem);
+//       if (bonus !== null) {
+//         referral.referralBonus = bonus;
+//         referral.totalBonus = bonus;
+//         await referral.save();
+//       }
+
+//       return referral;
+//     } catch (err) {
+//       throw new Error(err.message);
+//     }
+//   },
+
+//   // Get a referral document by its referral code
+//   async getReferralByCode(referralCode) {
+//     try {
+//       const referral = await Referral.findOne({ referralCode });
+//       return referral;
+//     } catch (err) {
+//       throw new Error(err.message);
+//     }
+//   },
+
+//   // Update a referral document with new data
+//   async updateReferral(referral, data) {
+//     try {
+//       Object.assign(referral, data);
+//       await referral.save();
+//       return referral;
+//     } catch (err) {
+//       throw new Error(err.message);
+//     }
+//   }
+// };
+
+
+
 const Referral = require('../models/referral');
 const registerationAmount = process.env.REGISTERATION_FEE ? parseInt(process.env.REGISTERATION_FEE) : 125;
-const referralSystem =  process.env.REFERRAL_SYSTEM ? JSON.parse(process.env.REFERRAL_SYSTEM):  {"1":25,"2":4,"3":3,"4":2,"5":1};
+const referralSystem =  process.env.REFERRAL_SYSTEM ? JSON.parse(process.env.REFERRAL_SYSTEM):  {"1":25,"2":4,"3":3,"4":2,"5":1,"6":1,"7":1,"8":1};
 
 exports.startJob = async (job) => {
-   try {
+    // const referralSystem = {
+    //     level1: 0.25,
+    //     level2: 0.04,
+    //     level3: 0.03,
+    //     level4: 0.02,
+    //     level5: 0.01, 
+    //     level6: 0.01,
+    //     level7: 0.01,
+    //     level8: 0.01       
+    //   };
+      
+    //   function calculateReferralBonus(referrer, referredBy, registrationAmount) {
+    //     const levels = referredBy.split(',');
+    //     let bonus = 0;
+    //     let level1Count = 0;
+      
+    //     for (let i = 0; i < levels.length; i++) {
+    //       const level = i + 1;
+    //       const referrerLevel = levels[i];
+      
+    //       if (level === 1) {
+    //         level1Count++;
+    //       }
+      
+    //       if (referralSystem.hasOwnProperty(`level${level}`) && referralSystem[`level${level}`] > 0) {
+    //         bonus += registrationAmount * referralSystem[`level${level}`];
+    //       }
+    //     }
+      
+    //     if (level1Count < 4) {
+    //       return null;
+    //     }
+      
+    //     return bonus;
+    //   }
+      
+    // }
+
+    try {
        const referralTree = await Referral.aggregate([
            {
                $match: {
@@ -78,7 +204,6 @@ exports.startJob = async (job) => {
        console.error('Error updating referral bonus :', err);
        res.status(500).send('Internal Server Error');
    }
-}
 
 // Define the user controller functions
 exports.registerUserReferral = (referredBy, referralCode) => {
@@ -123,4 +248,4 @@ exports.referralBonus = async( referralCode) => {
 
  
 
-};
+}};
