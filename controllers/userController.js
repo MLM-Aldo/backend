@@ -600,7 +600,7 @@ exports.usersTransactions = async (req, res) => {
   const user = await User.findById(id);
 
   // Check if the receiver exists
-  const receiver = await User.findById(receiver_id);
+  const receiver = await User.findById(id);
   if (!receiver) {
     return res.status(404).json({ message: 'Receiver not found.' });
   }
