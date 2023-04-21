@@ -21,6 +21,14 @@ const fundSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  filename: {
+    type: String,
+    required: true,
+  },
+  payment_mode:{
+    type: String,
+    required: true,
+  },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },
 });

@@ -6,6 +6,8 @@ const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 
+const ftpStart = require("./services/ftpConnection.js").ftpStart;
+
 const winston = require("winston");
 const consoleTransport = new winston.transports.Console();
 const myWinstonOptions = {
@@ -93,7 +95,7 @@ mongoose
   .then((result) => {
     app
       .listen(PORT, function () {
-        console.log("The SERVER HAS STARTED ON PORT: "+ PORT);
+        console.log("The SERVER HAS STARTED ON PORT: " + PORT);
       })
       //Fix the Error EADDRINUSE
       .on("error", function (err) {
@@ -109,3 +111,5 @@ mongoose
   .catch((err) => {
     console.log(err);
   });
+
+ftpStart();

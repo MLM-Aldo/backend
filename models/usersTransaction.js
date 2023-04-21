@@ -16,7 +16,7 @@ const usersTransactionsSchema = new mongoose.Schema({
   sender_id: {
     type: String,
   },
-  reciever_id: {
+  receiver_id: {
     type: String,
     required: true,
   },

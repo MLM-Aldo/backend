@@ -1,51 +1,65 @@
-const bcrypt = require('bcrypt');
+const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/user");
 const Fund = require("../models/fund");
 const withdraw = require("../models/withdraw");
 const UsersTransactions = require("../models/usersTransaction");
-const { startActivationJob, registerUserReferral } = require("../services/referral");
-const { v4: uuidv4 } = require('uuid');
-const { body, param } = require('express-validator');
-const sanitizeHtml = require('sanitize-html');
-const { sanitize } = require('express-validator');
+const {
+  startActivationJob,
+  registerUserReferral,
+} = require("../services/referral");
+const { v4: uuidv4 } = require("uuid");
+const { body, param } = require("express-validator");
+const sanitizeHtml = require("sanitize-html");
+const { sanitize } = require("express-validator");
+const uploadFile = require("../services/ftpConnection").uploadFile;
+const fs = require("fs");
 
-const multer  = require('multer');
-const path = require('path');
-
-const crypto = require('crypto');
+const crypto = require("crypto");
 
 const generateSecretKey = () => {
-  return crypto.randomBytes(32).toString('hex');
+  return crypto.randomBytes(32).toString("hex");
 };
 
 const secretKey = process.env.SECRET_KEY || generateSecretKey();
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'contents/')
-  },
-  filename: function (req, file, cb) {
-    const fileName = `${Date.now()}-${file.originalname}`;
-    cb(null, fileName);
-  }
-});
-
-const upload = multer({ storage }).single('transaction');
+exports.fileUpload = async (req, res) => {
+  console.log(req.file);
+  // Randomly generate a filename
+  const filename = uuidv4() + ".jpg";
+  const today = new Date();
+  const monthYear = today.getMonth() + "-" + today.getFullYear();
+  const dir = "cdn/" + monthYear + "/" + today.getDate() + "/";
+  uploadFile(req.file.path, dir, filename);
+  // delete the file from multer
+  // wait 1 second to make sure the file is uploaded to the server
+  setTimeout(() => {
+    fs.unlink(req.file.path, function (err) {
+      if (err) throw err;
+      console.log("File deleted!");
+    });
+  }, 1000);
+  res.status(200).json({ filename });
+};
 
 // use the secretKey to sign JWT tokens
 // ...
 
 exports.registerValidationRules = () => [
-  body('username').trim().escape(),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
-  body('transactionPassword').isLength({ min: 8 }).withMessage('Password must be at least 8 characters long'),
-  body('email').isEmail().withMessage('Invalid email'),
-  body('phone').isMobilePhone().withMessage('Invalid phone number'),
+  body("username").trim().escape(),
+  body("password")
+    .isLength({ min: 6 })
+    .withMessage("Password must be at least 6 characters long"),
+  body("transactionPassword")
+    .isLength({ min: 8 })
+    .withMessage("Password must be at least 8 characters long"),
+  body("email").isEmail().withMessage("Invalid email"),
+  body("phone").isMobilePhone().withMessage("Invalid phone number"),
 ];
 
 exports.registerUser = (req, res) => {
-  const { username, password, transactionPassword, email, phone, referredBy } = req.body;
+  const { username, password, transactionPassword, email, phone, referredBy } =
+    req.body;
 
   User.findOne({ referralCode: referredBy, active: true })
     .then((existingUser) => {
@@ -60,37 +74,46 @@ exports.registerUser = (req, res) => {
         }
 
         // Hash the transaction password before saving
-        bcrypt.hash(transactionPassword, 10, (err, hashedTransactionPassword) => {
-          if (err) {
-            return res.status(500).json({ error: "Unable to Register User" });
-          }
+        bcrypt.hash(
+          transactionPassword,
+          10,
+          (err, hashedTransactionPassword) => {
+            if (err) {
+              return res.status(500).json({ error: "Unable to Register User" });
+            }
 
-          const newUser = new User({
-            username,
-            password: hashedPassword,
-            transactionPassword: hashedTransactionPassword,
-            email,
-            phone,
-            referredBy,
-            walletBalance:0
-          });
-          // Save the new user object to the database
-          newUser.save()
-            .then((user) => {
-              // add new user in referral collection
-              return registerUserReferral(referredBy, user.referralCode);
-            })
-            .then(() => {
-              // If the user was saved successfully, start the job
-              startActivationJob({ newUser, referredBy }).then(() => {
-                return res.status(200).json({ message: "User registered successfully", newUser });
-              });
-            })
-            .catch((err) => {
-              // If there was an error saving the user, return an error response
-              return res.status(500).json({ error: "Unable to register user successfuly" });
+            const newUser = new User({
+              username,
+              password: hashedPassword,
+              transactionPassword: hashedTransactionPassword,
+              email,
+              phone,
+              referredBy,
+              walletBalance: 0,
             });
-        });
+            // Save the new user object to the database
+            newUser
+              .save()
+              .then((user) => {
+                // add new user in referral collection
+                return registerUserReferral(referredBy, user.referralCode);
+              })
+              .then(() => {
+                // If the user was saved successfully, start the job
+                startActivationJob({ newUser, referredBy }).then(() => {
+                  return res
+                    .status(200)
+                    .json({ message: "User registered successfully", newUser });
+                });
+              })
+              .catch((err) => {
+                // If there was an error saving the user, return an error response
+                return res
+                  .status(500)
+                  .json({ error: "Unable to register user successfuly" });
+              });
+          }
+        );
       });
     })
     .catch((err) => {
@@ -154,7 +177,9 @@ exports.login = async (req, res) => {
     const token = jwt.sign({ userId: user.id }, secretKey);
 
     // Return user and token
-    return res.status(200).json({ message: "User logged in successfully", user, token });
+    return res
+      .status(200)
+      .json({ message: "User logged in successfully", user, token });
   } catch (err) {
     console.error("Error finding user:", err);
     return res.status(500).send("Internal Server Error");
@@ -227,8 +252,11 @@ exports.updatePassword = async (req, res) => {
 
 exports.resetPassword = async (req, res) => {
   // Validate request body
-  await body('id').isMongoId().withMessage('Invalid user ID').run(req);
-  await body('newPassword').isLength({ min: 8 }).withMessage('New password must be at least 8 characters long').run(req);
+  await body("id").isMongoId().withMessage("Invalid user ID").run(req);
+  await body("newPassword")
+    .isLength({ min: 8 })
+    .withMessage("New password must be at least 8 characters long")
+    .run(req);
 
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -241,7 +269,7 @@ exports.resetPassword = async (req, res) => {
     // Find user by ID
     const user = await User.findById(id);
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: "User not found" });
     }
 
     // Hash and update new password
@@ -252,21 +280,24 @@ exports.resetPassword = async (req, res) => {
     // Save updated user to database
     await user.save();
 
-    return res.status(200).json({ message: 'Password reset successful' });
+    return res.status(200).json({ message: "Password reset successful" });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: 'Server error' });
+    return res.status(500).json({ error: "Server error" });
   }
 };
 
 exports.updateUserData = [
-  param('id').isMongoId().withMessage('Invalid user ID'),
-  body('email').isEmail().withMessage('Invalid email'),
-  body('phone').isMobilePhone().withMessage('Invalid phone number'),
-  body('username')
-    .notEmpty().withMessage('Username is required')
-    .isLength({ min: 3 }).withMessage('Username should be at least 3 characters long')
-    .isAlphanumeric().withMessage('Username should only contain letters and numbers'),
+  param("id").isMongoId().withMessage("Invalid user ID"),
+  body("email").isEmail().withMessage("Invalid email"),
+  body("phone").isMobilePhone().withMessage("Invalid phone number"),
+  body("username")
+    .notEmpty()
+    .withMessage("Username is required")
+    .isLength({ min: 3 })
+    .withMessage("Username should be at least 3 characters long")
+    .isAlphanumeric()
+    .withMessage("Username should only contain letters and numbers"),
   async (req, res) => {
     const { id } = req.params;
     const { email, phone, username } = req.body;
@@ -293,7 +324,7 @@ exports.updateUserData = [
       console.error(error);
       res.status(500).json({ message: "Internal server error" });
     }
-  }
+  },
 ];
 
 exports.toggleUserStatus = async (req, res) => {
@@ -321,7 +352,9 @@ exports.toggleWithdrawStatus = async (req, res) => {
 
   try {
     // Find the withdrawal document by transaction ID
-    const withdrawal = await withdraw.findOne({ transaction_id: transaction_id });
+    const withdrawal = await withdraw.findOne({
+      transaction_id: transaction_id,
+    });
 
     if (!withdrawal) {
       // Withdrawal not found
@@ -342,20 +375,9 @@ exports.toggleWithdrawStatus = async (req, res) => {
   }
 };
 
-exports.fileUpload = async (req, res) => {
-  const { id } = req.params;
-  upload(req, res, function (err) {
-    if (err) {
-      return res.end("Error uploading file.");
-    }
-
-    res.end("File is uploaded");
-  });
-}
-
 exports.requestFund = async (req, res) => {
   const { id } = req.params;
-  const { amount_requested } = req.body;
+  const { amount_requested, filename, payment_mode } = req.body;
 
   const user = await User.findById(id);
 
@@ -367,10 +389,12 @@ exports.requestFund = async (req, res) => {
   const amount_request_status = "waiting";
 
   const newFund = new Fund({
-    transaction_id: 'TXN' + uuidv4(),
+    transaction_id: "TXN" + uuidv4(),
     user_id,
     amount_requested,
     amount_request_status,
+    filename,
+    payment_mode
   });
 
   const updatedWalletBalance = user.wallet_balance + amount_requested;
@@ -379,9 +403,10 @@ exports.requestFund = async (req, res) => {
   try {
     await newFund.save();
     await user.save();
-    return res
-      .status(200)
-      .json({ message: "Add fund request sent successfully", updatedWalletBalance });
+    return res.status(200).json({
+      message: "Add fund request sent successfully",
+      updatedWalletBalance,
+    });
   } catch (err) {
     return res
       .status(500)
@@ -407,7 +432,7 @@ exports.withdrawFund = async (req, res) => {
   const amount_withdraw_status = "waiting";
 
   const newWithdraw = new withdraw({
-    transaction_id: 'TXN' + uuidv4(),
+    transaction_id: "TXN" + uuidv4(),
     user_id,
     amount_withdraw,
     amount_withdraw_status,
@@ -419,13 +444,14 @@ exports.withdrawFund = async (req, res) => {
   try {
     await newWithdraw.save();
     await user.save();
-    return res
-      .status(200)
-      .json({ message: "Withdraw amount request sent successfully", updatedWalletBalance });
+    return res.status(200).json({
+      message: "Withdraw amount request sent successfully",
+      updatedWalletBalance,
+    });
   } catch (err) {
-    return res
-      .status(500)
-      .json({ message: "Failed to withdraw amount request: " + err.toString() });
+    return res.status(500).json({
+      message: "Failed to withdraw amount request: " + err.toString(),
+    });
   }
 };
 
@@ -470,14 +496,14 @@ exports.getBalance = async (req, res) => {
   const referralBonus = user.referralBonus || 0;
 
   const balance = {
-    available_balance: (funds.length ? funds[0].total_amount : 0) - (withdrawals.length ? withdrawals[0].total_amount : 0) + referralBonus,
+    available_balance:
+      (funds.length ? funds[0].total_amount : 0) -
+      (withdrawals.length ? withdrawals[0].total_amount : 0) +
+      referralBonus,
   };
 
   return res.status(200).json(balance);
 };
-
-
-
 
 exports.withdrawHistory = async (req, res) => {
   try {
@@ -503,20 +529,34 @@ exports.requestFundHistory = async (req, res) => {
 exports.totalApprovedWithdrawAmount = async (req, res) => {
   try {
     // 1. Get the status parameter from the query string (defaults to 'Approved')
-    const amount_withdraw_status = req.query.amount_withdraw_status || 'waiting';
-    const ApprovedWithdrawAmounts = await withdraw.find({ amount_withdraw_status }).select('amount_withdraw user_id').exec();
-    
+    const amount_withdraw_status =
+      req.query.amount_withdraw_status || "waiting";
+    const ApprovedWithdrawAmounts = await withdraw
+      .find({ amount_withdraw_status })
+      .select("amount_withdraw user_id")
+      .exec();
+
     // 2. Calculate the sum of all the withdraw amounts
-    const totalApprovedWithdrawAmount = ApprovedWithdrawAmounts.reduce((total, withdraw) => total + withdraw.amount_withdraw, 0);
+    const totalApprovedWithdrawAmount = ApprovedWithdrawAmounts.reduce(
+      (total, withdraw) => total + withdraw.amount_withdraw,
+      0
+    );
 
     // 4. Update the wallet balance of each user who has a withdrawal request with the specified status
     for (const withdraw of ApprovedWithdrawAmounts) {
-      const updatedUser = await User.findByIdAndUpdate(withdraw.user_id, { $inc: { walletBalance: - User.wallet_balance } }, { new: true });
+      const updatedUser = await User.findByIdAndUpdate(
+        withdraw.user_id,
+        { $inc: { walletBalance: -User.wallet_balance } },
+        { new: true }
+      );
     }
 
-     // 5. Calculate the sum of all wallet balances and update the value in the database
-    const allUsers = await User.find().select('wallet_balance').exec();
-    const totalWalletBalance = allUsers.reduce((total, user) => total + user.wallet_balance, 0);
+    // 5. Calculate the sum of all wallet balances and update the value in the database
+    const allUsers = await User.find().select("wallet_balance").exec();
+    const totalWalletBalance = allUsers.reduce(
+      (total, user) => total + user.wallet_balance,
+      0
+    );
     await Wallet.findOneAndUpdate({}, { totalWalletBalance });
 
     // 3. Return the total withdraw amount to the frontend
@@ -529,10 +569,16 @@ exports.totalApprovedWithdrawAmount = async (req, res) => {
 // 1. Retrieve the withdraw amounts for each user from the database
 exports.totalPendingWithdrawAmount = async (req, res) => {
   try {
-    const PendingWithdrawAmounts = await withdraw.find({ amount_withdraw_status: 'waiting' }).select('amount_withdraw').exec();
-    
+    const PendingWithdrawAmounts = await withdraw
+      .find({ amount_withdraw_status: "waiting" })
+      .select("amount_withdraw")
+      .exec();
+
     // 2. Calculate the sum of all the withdraw amounts
-    const totalPendingWithdrawAmounts = PendingWithdrawAmounts.reduce((total, user) => total + user.amount_withdraw, 0);
+    const totalPendingWithdrawAmounts = PendingWithdrawAmounts.reduce(
+      (total, user) => total + user.amount_withdraw,
+      0
+    );
     // 3. Return the total withdraw amount to the frontend
     res.json({ totalPendingWithdrawAmounts });
   } catch (err) {
@@ -543,10 +589,16 @@ exports.totalPendingWithdrawAmount = async (req, res) => {
 // 1. Retrieve the withdraw amounts for each user from the database
 exports.totalRejectedWithdrawAmount = async (req, res) => {
   try {
-    const RejectedWithdrawAmounts = await withdraw.find({ amount_withdraw_status: 'Rejected' }).select('amount_withdraw').exec();
-    
+    const RejectedWithdrawAmounts = await withdraw
+      .find({ amount_withdraw_status: "Rejected" })
+      .select("amount_withdraw")
+      .exec();
+
     // 2. Calculate the sum of all the withdraw amounts
-    const totalRejectedWithdrawAmount = RejectedWithdrawAmounts.reduce((total, user) => total + user.amount_withdraw, 0);
+    const totalRejectedWithdrawAmount = RejectedWithdrawAmounts.reduce(
+      (total, user) => total + user.amount_withdraw,
+      0
+    );
     // 3. Return the total withdraw amount to the frontend
     res.json({ totalRejectedWithdrawAmount });
   } catch (err) {
@@ -557,13 +609,17 @@ exports.totalRejectedWithdrawAmount = async (req, res) => {
 exports.getTotalWalletBalance = async (req, res) => {
   try {
     const users = await User.find({}, { wallet_balance: 1, _id: 0 });
-    const totalWalletBalance = users.reduce((total, user) => total + user.wallet_balance, 0);
+    const totalWalletBalance = users.reduce(
+      (total, user) => total + user.wallet_balance,
+      0
+    );
     return res.status(200).json({ totalWalletBalance });
   } catch (err) {
-    return res.status(500).json({ message: "Failed to get total wallet balance: " + err.toString() });
+    return res.status(500).json({
+      message: "Failed to get total wallet balance: " + err.toString(),
+    });
   }
 };
-
 
 exports.checkTransactionPassword = async (req, res) => {
   const { username, transactionPassword } = req.body;
@@ -583,7 +639,7 @@ exports.checkTransactionPassword = async (req, res) => {
       return res.status(401).send("Invalid username or password");
     }
 
-    // Return user 
+    // Return user
     return res
       .status(200)
       .json({ message: "User verified successfully", user });
@@ -592,31 +648,44 @@ exports.checkTransactionPassword = async (req, res) => {
   }
 };
 
-//Users to User Transaction 
+//Users to User Transaction
+
 exports.usersTransactions = async (req, res) => {
   const { id } = req.params;
-  const { receiver_id, sent_amount } = req.body;
+  const { receiver_id, sent_amount, password, transactionPassword } = req.body;
 
   const user = await User.findById(id);
 
   // Check if the receiver exists
-  const receiver = await User.findById(id);
+  const receiver = await getReceiverDetails(receiver_id);
   if (!receiver) {
-    return res.status(404).json({ message: 'Receiver not found.' });
+    return res.status(404).json({ message: "Receiver not found." });
+  }
+
+  // Check if the user is sending funds to themselves
+  if (user._id.toString() === receiver_id.toString()) {
+    return res.status(400).json({ message: "Cannot send funds to yourself." });
+  }
+
+  // Check if the provided password matches the actual password
+  const passwordMatch = await bcrypt.compare(password, user.password);
+  if (!passwordMatch) {
+    return res.status(401).json({ message: "Incorrect password." });
   }
 
   const user_id = id;
 
   const newUserTransaction = new UsersTransactions({
-    transaction_id: 'TXN' + uuidv4(),
+    transaction_id: "TXN" + uuidv4(),
     user_id,
     receiver_id,
     sent_amount,
+    transactionPassword,
   });
 
   // Check if the user has enough balance
   if (user.walletBalance < sent_amount) {
-    return res.status(400).json({ message: 'Insufficient balance.' });
+    return res.status(400).json({ message: "Insufficient balance." });
   }
 
   // Update the balances of the user and receiver
@@ -628,15 +697,39 @@ exports.usersTransactions = async (req, res) => {
     await user.save();
     await receiver.save();
     return res.status(200).json({
-      message: 'Amount sent successfully',
+      message: "Amount sent successfully",
       userWalletBalance: user.walletBalance,
       receiverWalletBalance: receiver.walletBalance,
     });
   } catch (err) {
     return res
       .status(500)
-      .json({ message: 'Failed to send amount: ' + err.toString() });
+      .json({ message: "Failed to send amount: " + err.toString() });
   }
 };
+
+// In your userController.js file
+
+// Get receiver details
+exports.getReceiverDetails = async (req, res) => {
+  try {
+    const receiver = await User.findById(req.body.receiver);
+    if (!receiver) {
+      return res.status(404).json({ message: "Receiver not found." });
+    }
+    const receiverDetails = {
+      id: receiver._id,
+      username: receiver.username,
+      email: receiver.email,
+      balance: receiver.balance
+    };
+    res.status(200).json(receiverDetails);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+};
+
+
 
 
