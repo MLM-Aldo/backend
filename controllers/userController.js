@@ -652,12 +652,12 @@ exports.checkTransactionPassword = async (req, res) => {
 
 exports.usersTransactions = async (req, res) => {
   const { id } = req.params;
-  const { receiver_id, sent_amount, password, transactionPassword } = req.body;
+  const {user_id, receiver_id, sent_amount,  transactionPassword } = req.body;
 
   const user = await User.findById(id);
 
   // Check if the receiver exists
-  const receiver = await getReceiverDetails(receiver_id);
+  const receiver = await Users.findOne({user_id})
   if (!receiver) {
     return res.status(404).json({ message: "Receiver not found." });
   }
@@ -672,8 +672,6 @@ exports.usersTransactions = async (req, res) => {
   if (!passwordMatch) {
     return res.status(401).json({ message: "Incorrect password." });
   }
-
-  const user_id = id;
 
   const newUserTransaction = new UsersTransactions({
     transaction_id: "TXN" + uuidv4(),
@@ -713,15 +711,14 @@ exports.usersTransactions = async (req, res) => {
 // Get receiver details
 exports.getReceiverDetails = async (req, res) => {
   try {
-    const receiver = await User.findById(req.body.receiver);
-    if (!receiver) {
+    const { receiver } = req.body;
+    const receiver_id = await User.findOne(receiver);
+    if (!receiver_id) {
       return res.status(404).json({ message: "Receiver not found." });
     }
     const receiverDetails = {
-      id: receiver._id,
-      username: receiver.username,
-      email: receiver.email,
-      balance: receiver.balance
+      id: receiver_id._id,
+      username: receiver_id.username,
     };
     res.status(200).json(receiverDetails);
   } catch (err) {

@@ -45,7 +45,7 @@ router.post(
   userController.checkTransactionPassword
 );
 router.post("/:id/UsersTransactions", userController.usersTransactions);
-router.get("/:id/getReceiverDetails", userController.getReceiverDetails);
+router.post("/:id/getReceiverDetails", userController.getReceiverDetails);
 
 // Export the user routes
 module.exports = router;
