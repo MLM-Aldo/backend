@@ -1,5 +1,8 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const mongoose = require('mongoose');
+const { ObjectId } = require('mongodb');
+const { Types } = require('mongoose');
 const User = require("../models/user");
 const Fund = require("../models/fund");
 const withdraw = require("../models/withdraw");
@@ -14,8 +17,10 @@ const sanitizeHtml = require("sanitize-html");
 const { sanitize } = require("express-validator");
 const uploadFile = require("../services/ftpConnection").uploadFile;
 const fs = require("fs");
+const pageSize = 10;
 
 const crypto = require("crypto");
+const Referral = require("../models/referral");
 
 const generateSecretKey = () => {
   return crypto.randomBytes(32).toString("hex");
@@ -23,30 +28,11 @@ const generateSecretKey = () => {
 
 const secretKey = process.env.SECRET_KEY || generateSecretKey();
 
-exports.fileUpload = async (req, res) => {
-  console.log(req.file);
-  // Randomly generate a filename
-  const filename = uuidv4() + ".jpg";
-  const today = new Date();
-  const monthYear = today.getMonth() + "-" + today.getFullYear();
-  const dir = "cdn/" + monthYear + "/" + today.getDate() + "/";
-  uploadFile(req.file.path, dir, filename);
-  // delete the file from multer
-  // wait 1 second to make sure the file is uploaded to the server
-  setTimeout(() => {
-    fs.unlink(req.file.path, function (err) {
-      if (err) throw err;
-      console.log("File deleted!");
-    });
-  }, 1000);
-  res.status(200).json({ filename });
-};
-
 // use the secretKey to sign JWT tokens
 // ...
 
 exports.registerValidationRules = () => [
-  body("username").trim().escape(),
+  body("loginId").trim().escape(),
   body("password")
     .isLength({ min: 6 })
     .withMessage("Password must be at least 6 characters long"),
@@ -58,7 +44,7 @@ exports.registerValidationRules = () => [
 ];
 
 exports.registerUser = (req, res) => {
-  const { username, password, transactionPassword, email, phone, referredBy } =
+  const { loginId, password, transactionPassword, email, phone, referredBy } =
     req.body;
 
   User.findOne({ referralCode: referredBy, active: true })
@@ -83,30 +69,28 @@ exports.registerUser = (req, res) => {
             }
 
             const newUser = new User({
-              username,
+              loginId,
               password: hashedPassword,
               transactionPassword: hashedTransactionPassword,
               email,
               phone,
               referredBy,
               walletBalance: 0,
+              isActive: false, // Set isActive to false initially
+              membership:0, // Set the user package
             });
+
             // Save the new user object to the database
             newUser
               .save()
               .then((user) => {
-                // add new user in referral collection
-                return registerUserReferral(referredBy, user.referralCode);
-              })
-              .then(() => {
-                // If the user was saved successfully, start the job
-                startActivationJob({ newUser, referredBy }).then(() => {
-                  return res
-                    .status(200)
-                    .json({ message: "User registered successfully", newUser });
+                return res.status(200).json({
+                  message: "User registered successfully",
+                  newUser,
                 });
               })
               .catch((err) => {
+                console.log(err);
                 // If there was an error saving the user, return an error response
                 return res
                   .status(500)
@@ -122,9 +106,30 @@ exports.registerUser = (req, res) => {
     });
 };
 
+exports.fileUpload = async (req, res) => {
+ // console.log(req.file);
+  // Randomly generate a filename
+  const filename = uuidv4() + ".jpg";
+  const today = new Date();
+  const monthYear = today.getMonth() + "-" + today.getFullYear();
+  const dir =   monthYear + "/" + today.getDate() + "/";
+  uploadFile(req.file.path, dir, filename);
+  // delete the file from multer
+  // wait 1 second to make sure the file is uploaded to the server
+  setTimeout(() => {
+    fs.unlink(req.file.path, function (err) {
+      if (err) throw err;
+      console.log("File deleted!");
+    });
+  }, 1000);
+  const filePath = dir + filename;
+  res.status(200).json({ filePath });
+};
+
 exports.allUsers = async (req, res) => {
   try {
-    const users = await User.find({}, "-password -__v");
+    const users = await User.find({ isAdmin: { $ne: true } },"-password -__v -transactionPassword");
+    console.log(users);
 
     return res.status(200).json({ users });
   } catch (err) {
@@ -154,6 +159,7 @@ exports.referrals = async (req, res) => {
     ]);
     return res.status(200).json({ users });
   } catch (err) {
+    console.log(err);
     res.status(500).send("Internal Server Error");
   }
 };
@@ -185,33 +191,6 @@ exports.login = async (req, res) => {
     return res.status(500).send("Internal Server Error");
   }
 };
-
-// exports.login = async (req, res) => {
-//   const { username, password } = req.body;
-
-//   try {
-//     const user = await User.findOne({ username });
-//     if (!user) {
-//       return res.status(401).send("Invalid username or password");
-//     }
-//     if (user.password !== password) {
-//       return res.status(401).send("Invalid username or password");
-//     }
-
-//     if (user) {
-//       const token = jwt.sign({ userId: user.id }, secretKey);
-//       res.json({ user, token });
-//       return res
-//         .status(200)
-//         .json({ message: "User logged in successfully", user });
-//     } else {
-//       return res.status(401).json({ message: "Invalid username or password" });
-//     }
-//   } catch (err) {
-//     console.error("Error finding user:", err);
-//     return res.status(500).send("Internal Server Error");
-//   }
-// };
 
 exports.logout = async (req, res) => {
   return res.status(200).json({ message: "User logged out successfully" });
@@ -329,23 +308,33 @@ exports.updateUserData = [
 
 exports.toggleUserStatus = async (req, res) => {
   const { id } = req.params;
-  const { active } = req.body;
+  const { active, membership,referredBy } = req.body; 
 
   try {
-    const user = await User.findById(id);
-    if (!user) {
+    const result = await User.updateOne({ _id: id }, { active, membership });
+    
+    if (result.nModified === 0) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    user.active = active;
-    await user.save();
-
-    res.status(200).json(user);
+    console.log("Starting activation job for user with id: ", id);
+    if (active) {
+      startActivationJob({ userId: id, membership, referredBy}).then(() => {
+        console.log("Activation job completed for user with id: ", id);
+        res.status(200).json({ message: "User updated" });
+      });
+    } else {
+      res.status(200).json({ message: "User updated" });
+    }
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+
+
+
 exports.toggleWithdrawStatus = async (req, res) => {
   const { transaction_id } = req.params;
   const { amount_withdraw_status } = req.body;
@@ -377,7 +366,7 @@ exports.toggleWithdrawStatus = async (req, res) => {
 
 exports.requestFund = async (req, res) => {
   const { id } = req.params;
-  const { amount_requested, filename, payment_mode } = req.body;
+  const { amount_requested, filePath, payment_mode } = req.body;
 
   const user = await User.findById(id);
 
@@ -393,8 +382,8 @@ exports.requestFund = async (req, res) => {
     user_id,
     amount_requested,
     amount_request_status,
-    filename,
-    payment_mode
+    filePath,
+    payment_mode,
   });
 
   const updatedWalletBalance = user.wallet_balance + amount_requested;
@@ -457,12 +446,21 @@ exports.withdrawFund = async (req, res) => {
 
 exports.getBalance = async (req, res) => {
   const { id } = req.params;
+  const referralCode = req.query.referralCode;
+  console.log(referralCode);
 
   const user = await User.findById(id);
   if (!user) {
     return res.status(404).json({ message: "User not found" });
   }
-
+  
+  let referralBonus = 0;
+  const referral = await Referral.findOne({ referralCode });
+  console.log(referral);
+  if (referral) {
+    referralBonus = referral.referralBonus || 0;    
+    console.log(referralBonus);
+  }
   const funds = await Fund.aggregate([
     {
       $match: {
@@ -478,7 +476,7 @@ exports.getBalance = async (req, res) => {
     },
   ]);
 
-  const withdrawals = await Withdraw.aggregate([
+  const withdrawals = await withdraw.aggregate([
     {
       $match: {
         user_id: id,
@@ -493,14 +491,56 @@ exports.getBalance = async (req, res) => {
     },
   ]);
 
-  const referralBonus = user.referralBonus || 0;
+  const receivedAmount = await UsersTransactions.aggregate([
+    {
+      $match: {
+        receiver_id: id,
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        total_amount: { $sum: "$received_amount" },
+      },
+    },
+  ]);
+
+  const sentAmount = await UsersTransactions.aggregate([
+    {
+      $match: {
+        sender_id: id,
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        total_amount: { $sum: "$sent_amount" },
+      },
+    },
+  ]);
+
 
   const balance = {
     available_balance:
       (funds.length ? funds[0].total_amount : 0) -
       (withdrawals.length ? withdrawals[0].total_amount : 0) +
+      (receivedAmount.length ? receivedAmount[0].total_amount : 0) -
+      (sentAmount.length ? sentAmount[0].total_amount : 0) +
       referralBonus,
   };
+  console.log(balance.available_balance);
+
+   // Check if the balance is a valid number
+   if (isNaN(balance.available_balance)) {
+    return res.status(500).json({ message: "Error: invalid balance" });
+  }
+
+  // Update the user's wallet balance in the database
+  const updatedUser = await User.findByIdAndUpdate(
+    id,
+    { walletBalance: balance.available_balance },
+    { new: true } // Return the updated document
+  );
 
   return res.status(200).json(balance);
 };
@@ -637,7 +677,7 @@ exports.checkTransactionPassword = async (req, res) => {
     );
     if (!match) {
       return res.status(401).send("Invalid username or password");
-    }
+    };
 
     // Return user
     return res
@@ -652,51 +692,69 @@ exports.checkTransactionPassword = async (req, res) => {
 
 exports.usersTransactions = async (req, res) => {
   const { id } = req.params;
-  const {user_id, receiver_id, sent_amount,  transactionPassword } = req.body;
+  const { sender_id, receiver_id, sent_amount, transactionPassword } = req.body;
+  console.log(req.body);
+  // validate input
+  if (!sender_id || !receiver_id || !sent_amount) {
+    res.status(400).send("Missing required parameters");
+    return;
+  }
 
-  const user = await User.findById(id);
+  // find sender and recipient accounts
+  const sender = await User.findById(sender_id);
 
-  // Check if the receiver exists
-  const receiver = await Users.findOne({user_id})
+  if (!sender) {
+    res.status(404).send("Sender account not found");
+    return;
+  }
+
+  const receiver = await User.findById(receiver_id);
+
   if (!receiver) {
-    return res.status(404).json({ message: "Receiver not found." });
+    res.status(404).send("Receiver account not found");
+    return;
   }
 
   // Check if the user is sending funds to themselves
-  if (user._id.toString() === receiver_id.toString()) {
+  if (sender.toString() === receiver.toString()) {
     return res.status(400).json({ message: "Cannot send funds to yourself." });
   }
 
   // Check if the provided password matches the actual password
-  const passwordMatch = await bcrypt.compare(password, user.password);
+  const passwordMatch = await bcrypt.compare(
+    transactionPassword,
+    sender.transactionPassword
+  );
   if (!passwordMatch) {
     return res.status(401).json({ message: "Incorrect password." });
   }
 
   const newUserTransaction = new UsersTransactions({
     transaction_id: "TXN" + uuidv4(),
-    user_id,
+    sender_id,
     receiver_id,
     sent_amount,
+    received_amount: sent_amount,
     transactionPassword,
   });
+  
 
   // Check if the user has enough balance
-  if (user.walletBalance < sent_amount) {
+  if (sender.walletBalance < sent_amount) {
     return res.status(400).json({ message: "Insufficient balance." });
   }
 
   // Update the balances of the user and receiver
-  user.walletBalance -= sent_amount;
+  sender.walletBalance -= sent_amount;
   receiver.walletBalance += sent_amount;
 
   try {
     await newUserTransaction.save();
-    await user.save();
+    await sender.save();
     await receiver.save();
     return res.status(200).json({
       message: "Amount sent successfully",
-      userWalletBalance: user.walletBalance,
+      userWalletBalance: sender.walletBalance,
       receiverWalletBalance: receiver.walletBalance,
     });
   } catch (err) {
@@ -706,27 +764,161 @@ exports.usersTransactions = async (req, res) => {
   }
 };
 
-// In your userController.js file
-
-// Get receiver details
-exports.getReceiverDetails = async (req, res) => {
+exports.userTransactionHistory = async (req, res) => {
   try {
-    const { receiver } = req.body;
-    const receiver_id = await User.findOne(receiver);
-    if (!receiver_id) {
-      return res.status(404).json({ message: "Receiver not found." });
+    console.log(req.query);
+    const { user_id, pageNumber, pageSize } = req.query;
+    const page = parseInt(pageNumber) || 1;
+    const size = parseInt(pageSize) || 10;
+    if (size <= 0) {
+      return res.status(400).json({ message: 'Invalid page size' });
     }
-    const receiverDetails = {
-      id: receiver_id._id,
-      username: receiver_id.username,
-    };
-    res.status(200).json(receiverDetails);
+    const skipAmount = (page - 1) * size;
+
+    const sentTransactions = await UsersTransactions.find({ sender_id: user_id })
+      .populate('receiver_id', 'name');
+
+    const receivedTransactions = await UsersTransactions.find({ receiver_id: user_id })
+      .populate('sender_id', 'name');
+
+    const allTransactions = [...sentTransactions, ...receivedTransactions].sort((a, b) => b.createdAt - a.createdAt);
+
+    const totalCount = allTransactions.length;
+    const totalPages = Math.ceil(totalCount / size);
+
+    if (page > totalPages) {
+      return res.status(400).json({ message: `Page number ${page} exceeds the total number of pages ${totalPages}` });
+    }
+
+    const start = skipAmount;
+    const end = Math.min(skipAmount + size, totalCount);
+    const formattedTransactions = allTransactions.slice(start, end).map((transaction) => {
+      const isSent = transaction.sender_id.toString() === user_id.toString();
+      const transactionType = isSent ? 'sent' : 'received';
+      const amount = isSent ? transaction.sent_amount : transaction.received_amount;
+      const counterParty = isSent ? transaction.receiver_id.name : transaction.sender_id.name;
+
+      return {
+        ...transaction.toObject(),
+        transactionType,
+        amount,
+        counterParty,
+      };
+    });
+
+    return res.status(200).json({ transactions: formattedTransactions, totalPages });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send("Server Error");
+    console.log(err);
+    res.status(500).send('Internal Server Error');
   }
 };
 
 
+exports.directReferrals = async (req, res) => {
+  try {
+    const referralCode = req.query.referralCode;
+  // Query the database to retrieve the user who matches the referral code
+  const matchedUser = await User.findOne({ referralCode } );
+
+  if (!matchedUser) {
+    return res.status(404).send('User not found');
+  }
+
+  // Retrieve a list of all users who were referred by the matched user
+  const referredUsers = await User.find({ referredBy: matchedUser.referralCode, _id: { $ne: matchedUser._id } });
+
+  console.log(referredUsers);
+  // Return the list of referred users as a JSON response
+  res.json(referredUsers);
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Internal Server Error");
+  }
+};
+
+// Endpoint to activate a user
+exports.activateWallet = async (req, res) => {
+
+  const { id } = req.params;
+  const active = req.body.active
+  const referredBy = req.body.referredBy;
+  const membership = Number(req.body.membership);
+  console.log(membership);
+  const membershipLevels = [125, 250, 500, 1000];
+  const membershipActivationCosts = {
+    1000: 1000,
+    500: 500,
+    250: 250,
+    125: 125
+  }; 
+
+  try {
+    const result = await User.updateOne({ _id: id }, { active, membership });
+    
+    if (result.nModified === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    console.log("Starting activation job for user with id: ", id);
+    if (active) {
+      startActivationJob({ userId: id, membership, referredBy}).then( async () => {
+        console.log("active-member:", membership);
+        console.log("user:", id);
+        console.log("Referred BY:", referredBy);
+        console.log("Activation job completed for user with id: ", id);
+        const updatedUser = await User.findById(id);
+        res.status(200).json({ user: updatedUser, message: "User updated" });
+      });
+    } else {
+        const updatedUser = await User.findById(id);
+        res.status(200).json({ user: updatedUser, message: "User updated" });
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({message: "Internal server error" });
+  }
+
+  // const id = req.body.user_id;
+  // const referredBy = req.body.referredBy;
+  // const selectedMembership = Number(req.body.membership);
+  // console.log(selectedMembership);
+  // const membershipLevels = [125, 250, 500, 1000];
+  // const membershipActivationCosts = {
+  //   1000: 1000,
+  //   500: 500,
+  //   250: 250,
+  //   125: 125
+  // };
+  // const user = await User.findById(id);
+
+  // // Verify user exists and has selected a valid membership level
+  // if (!user) {
+  //   res.status(404).json({ error: 'User not found' });
+  // } else if (!membershipLevels.includes(selectedMembership)) {
+  //   res.status(400).json({ error: 'Invalid membership level selected' });
+  // } else if (user.walletBalance < membershipActivationCosts[selectedMembership]) {
+  //   res.status(400).json({ error: 'Insufficient funds to activate user' });
+  // } else {
+  //   // Deduct activation cost from user's wallet balance and update account status
+  //   user.walletBalance -= membershipActivationCosts[selectedMembership];
+  //   user.membership = selectedMembership;
+  //   user.active = true;
+  //   await user.save(); // save the changes to the database    
+
+  //   console.log("Starting activation job for user with id: ", id);
+  //   if (active) {
+  //     startActivationJob({ userId: id, selectedMembership, referredBy}).then(() => {
+  //       console.log("Activation job completed for user with id: ", id);
+  //       res.status(200).json({ message: "User updated" });
+  //     });
+  //   } else {
+  //     res.status(200).json({ message: "User updated" });
+  //   }
+
+  //   // Return success response
+  //   res.json({ message: 'User activated successfully' });
+  // }
+};
 
 
+// In your userController.js file

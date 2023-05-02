@@ -7,12 +7,12 @@ async function ftpStart() {
   await ftpClient
     .access({
       host: "sparkendeavors.in",
-      user: "u540517340.digiphins.in",
+      user: "u540517340.cdn",
       password: "sB20K77!gyL@",
       secure: false,
     })
     .then(async () => {
-      console.log("FTP Connection Established");
+     // console.log("FTP Connection Established");
     })
     .catch((err) => {
       console.log("FTP Connection Error: ", err);

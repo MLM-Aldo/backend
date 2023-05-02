@@ -21,7 +21,7 @@ const fundSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  filename: {
+  filePath: {
     type: String,
     required: true,
   },

@@ -6,9 +6,8 @@ const referralService = require('../services/referral')
 // Define the user controller functions
 exports.referralBonus = async (req, res) => {
     const referralCode = req.params.referralCode;
-
     try{
-        const referralAmount = await referralService.referralBonus(referralCode);
+        const referralAmount = await referralService.getReferralByCode(referralCode);
         if(referralAmount == null){{
             res.status(500).send('Internal Server Error');
         }} else{
@@ -16,5 +15,5 @@ exports.referralBonus = async (req, res) => {
         }
     } catch(err) {
         res.status(500).send('Internal Server Error');
-      }
+      }      
 };

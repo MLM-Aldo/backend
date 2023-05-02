@@ -45,7 +45,10 @@ router.post(
   userController.checkTransactionPassword
 );
 router.post("/:id/UsersTransactions", userController.usersTransactions);
-router.post("/:id/getReceiverDetails", userController.getReceiverDetails);
+router.get("/:id/userTransactionHistory", userController.userTransactionHistory);
+router.get("/referrals/:referralCode/users", userController.directReferrals);
+router.get("/:id/getBalance", userController.getBalance);
+router.put("/:id/activatewallet", userController.activateWallet);
 
 // Export the user routes
 module.exports = router;
