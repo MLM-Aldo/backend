@@ -21,6 +21,10 @@ const pageSize = 10;
 
 const crypto = require("crypto");
 const Referral = require("../models/referral");
+const { referrals } = require('./userController');
+const Withdraw = require("../models/withdraw");
+const multer  = require('multer');
+const path = require('path');
 
 const generateSecretKey = () => {
   return crypto.randomBytes(32).toString("hex");
@@ -30,6 +34,55 @@ const secretKey = process.env.SECRET_KEY || generateSecretKey();
 
 // use the secretKey to sign JWT tokens
 // ...
+
+// const upload = multer({ dest: 'public/assets/images' });
+
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    const newPath = 'contents/';
+    fs.mkdir(newPath, { recursive: true }, (err) => {
+      if (err) console.error('Error creating destination folder:', err);
+      cb(null, newPath);
+    });
+  },
+  filename: (_req, file, cb) => {
+    cb(null, file.originalname);
+  }
+});
+
+const uploadsFolder = multer({ storage });
+console.log(uploadsFolder);
+
+exports.bannerImage = async (req, res) => {
+  const { id } = req.params;
+  uploadsFolder.single('file')(req, res, (err) => {
+    if (err) return res.end("Error uploading file.");
+    res.end("File is uploaded");
+  });
+}
+
+// exports.bannerImage = (req, res) => {
+//   console.log('bannerImage function is called.');
+//   upload.single('file')(req, res, (err) => {
+//     if (err instanceof multer.MulterError) {
+//       console.log('Error uploading file.');
+//       return res.status(400).send('Error uploading file.');
+//     } else if (err) {
+//       console.log('Server error.');
+//       return res.status(500).send('Server error.');
+//     }
+
+//     if (!req.file) {
+//       console.log('No file uploaded.');
+//       return res.status(400).send('No file uploaded.');
+//     }
+
+//     console.log("Uploaded file name: ", req.file.filename);
+//     res.send(req.file.filename);
+//   });
+// };
+
 
 exports.registerValidationRules = () => [
   body("loginId").trim().escape(),
@@ -42,6 +95,24 @@ exports.registerValidationRules = () => [
   body("email").isEmail().withMessage("Invalid email"),
   body("phone").isMobilePhone().withMessage("Invalid phone number"),
 ];
+
+
+exports.currentUser = async (req, res) => {
+  // Extract session token from request headers
+  const id = req.query.user_id;
+  
+  try {
+
+    // Find user by ID in the database
+    const user = await User.findById(id);
+
+    // Return user as JSON response
+    res.status(200).json({ user });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
 
 exports.registerUser = (req, res) => {
   const { loginId, password, transactionPassword, email, phone, referredBy } =
@@ -83,12 +154,41 @@ exports.registerUser = (req, res) => {
             // Save the new user object to the database
             newUser
               .save()
+
               .then((user) => {
+                // Send an email to the new user
+                const transporter = nodemailer.createTransport({
+                  host: "smtp.gmail.com",
+                  port: 587,
+                  secure: false,
+                  auth: {
+                    user: "###",
+                    pass: "####",
+                  },
+                });
+
+                const mailOptions = {
+                  from: "shreevatsa.g@gmail.com",
+                  to: user.email,
+                  subject: "Welcome to our platform",
+                  text: `Dear ${user.loginId},\n\nWelcome to our platform! Your account has been successfully registered. We hope you enjoy using our services.\n\nBest regards,\nThe Platform Team`,
+                };
+
+                transporter.sendMail(mailOptions, (error, info) => {
+                  if (error) {
+                    console.log(error);
+                  } else {
+                    console.log(`Email sent: ${info.response}`);
+                  }
+                });
+
+                // Send a success response
                 return res.status(200).json({
                   message: "User registered successfully",
                   newUser,
-                });
+                })
               })
+              
               .catch((err) => {
                 console.log(err);
                 // If there was an error saving the user, return an error response
@@ -104,6 +204,32 @@ exports.registerUser = (req, res) => {
       // If there was an error checking the referral code, return an error response
       return res.status(500).json({ error: "Unable to register user" });
     });
+};
+exports.referrals = async (req, res) => {
+  const referralCode = req.body.referralCode;
+
+  try {
+    const users = await User.aggregate([
+      {
+        $match: {
+          referralCode: referralCode,
+        },
+      },
+      {
+        $graphLookup: {
+          from: "users",
+          startWith: "$referralCode",
+          connectFromField: "referralCode",
+          connectToField: "referredBy",
+          as: "reportingHierarchy",
+        },
+      },
+    ]);
+    return res.status(200).json({ users });
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Internal Server Error");
+  }
 };
 
 exports.fileUpload = async (req, res) => {
@@ -137,38 +263,13 @@ exports.allUsers = async (req, res) => {
   }
 };
 
-exports.referrals = async (req, res) => {
-  const referralCode = req.params.referralCode;
 
-  try {
-    const users = await User.aggregate([
-      {
-        $match: {
-          referralCode: referralCode,
-        },
-      },
-      {
-        $graphLookup: {
-          from: "users",
-          startWith: "$referralCode",
-          connectFromField: "referralCode",
-          connectToField: "referredBy",
-          as: "reportingHierarchy",
-        },
-      },
-    ]);
-    return res.status(200).json({ users });
-  } catch (err) {
-    console.log(err);
-    res.status(500).send("Internal Server Error");
-  }
-};
 
 exports.login = async (req, res) => {
-  const { username, password } = req.body;
+  const { loginId, password } = req.body;
 
   try {
-    const user = await User.findOne({ username });
+    const user = await User.findOne({ loginId });
     if (!user) {
       return res.status(401).send("Invalid username or password");
     }
@@ -547,11 +648,53 @@ exports.getBalance = async (req, res) => {
 
 exports.withdrawHistory = async (req, res) => {
   try {
-    const withdrawLists = await withdraw.find({}, "");
+    const userId = req.query.userId;
+    const status = req.query.status; // new query parameter for withdrawal status
+    const pageNumber = parseInt(req.query.pageNumber) || 1;
+    const pageSize = parseInt(req.query.pageSize) || 10;
+    console.log(userId, status, pageNumber, pageSize);
 
-    return res.status(200).json({ withdrawLists });
+    const skipAmount = (pageNumber - 1) * pageSize;
+
+    const filter = {}; // initialize empty filter object
+    if (status === "waiting") {
+      filter.amount_withdraw_status = "waiting"; // filter for pending withdrawals
+    } else if (status === "Approved") {
+      filter.amount_withdraw_status = "Approved"; // filter for completed withdrawals
+    } else {
+      return res.status(400).json({ message: `Invalid status: ${status}` }); // return error if status is invalid
+    }
+
+    const withdrawals = await withdraw.find({ user_id: userId, ...filter }) // include filter object in find() query
+      .sort({ createdAt: -1 })
+      .skip(skipAmount)
+      .limit(pageSize);
+
+    const totalCount = await withdraw.countDocuments({ user_id: userId, ...filter }); // include filter object in countDocuments() query
+    const totalPages = Math.ceil(totalCount / pageSize);
+
+    const pendingWithdrawals = withdrawals.filter(w => w.amount_withdraw_status === 'waiting');
+    const approvedWithdrawals = withdrawals.filter(w => w.amount_withdraw_status === 'Approved');
+
+    const pendingWithdrawalSum = pendingWithdrawals.reduce((total, w) => total + w.amount_withdraw, 0);
+    const approvedWithdrawalSum = approvedWithdrawals.reduce((total, w) => total + w.amount_withdraw, 0);
+
+    if (pageNumber > totalPages) {
+      return res.status(400).json({ message: `Page number ${pageNumber} exceeds the total number of pages ${totalPages}` });
+    }
+
+    res.status(200).json({
+      withdrawals,
+      pageNumber,
+      pageSize,
+      totalPages,
+      totalCount,
+      pendingWithdrawalSum,
+      approvedWithdrawalSum,
+    });
   } catch (err) {
-    res.status(500).send("Internal Server Error");
+    console.log(err);
+    res.status(500).send('Internal Server Error');
   }
 };
 
@@ -838,87 +981,172 @@ exports.directReferrals = async (req, res) => {
 
 // Endpoint to activate a user
 exports.activateWallet = async (req, res) => {
-
   const { id } = req.params;
-  const active = req.body.active
-  const referredBy = req.body.referredBy;
+  const active = req.body.active;
   const membership = Number(req.body.membership);
-  console.log(membership);
+  const referredBy = req.body.referredBy;
   const membershipLevels = [125, 250, 500, 1000];
   const membershipActivationCosts = {
     1000: 1000,
     500: 500,
     250: 250,
-    125: 125
+    125: 125,
   }; 
 
-  try {
-    const result = await User.updateOne({ _id: id }, { active, membership });
+  try {   
+    const updatedUser = await User.findById(id);
     
-    if (result.nModified === 0) {
+    if (!updatedUser) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    console.log("Starting activation job for user with id: ", id);
-    if (active) {
-      startActivationJob({ userId: id, membership, referredBy}).then( async () => {
+    if (!membershipLevels.includes(membership)) {
+      return res.status(400).json({ error: 'Invalid membership level selected' });
+    }
+
+    const walletBalance = updatedUser.walletBalance; // retrieve walletBalance from updatedUser document
+
+    if (walletBalance < membershipActivationCosts[membership]) {
+      return res.status(400).json({ error: 'Insufficient funds to activate user' });
+    } else if(""){
+    const result = await User.updateOne({ _id: id }, { active, membership })
+    }else if (active && updatedUser.active === false) {
+      console.log("Starting activation job for user with id: ", id);
+      startActivationJob({ userId: id, membership, referredBy}).then( () => {
         console.log("active-member:", membership);
         console.log("user:", id);
         console.log("Referred BY:", referredBy);
+
+        // Deduct membership activation cost from wallet balance
+        const newWalletBalance = walletBalance - membershipActivationCosts[membership];
+
+        // Update user's wallet balance in database
+        updatedUser.walletBalance = newWalletBalance;
+
+        // Update user's membership and active status
+        updatedUser.membership = membership;
+        updatedUser.active = active;
+        updatedUser.save();
+
         console.log("Activation job completed for user with id: ", id);
-        const updatedUser = await User.findById(id);
         res.status(200).json({ user: updatedUser, message: "User updated" });
       });
     } else {
-        const updatedUser = await User.findById(id);
-        res.status(200).json({ user: updatedUser, message: "User updated" });
+      const result = await User.updateOne({ _id: id }, { active, membership });
+
+      // Deduct membership activation cost from wallet balance
+      const newWalletBalance = walletBalance - membershipActivationCosts[membership];
+
+      // Update user's wallet balance in database
+      updatedUser.walletBalance = newWalletBalance;
+      updatedUser.save();
+      res.status(200).json({ user: updatedUser, message: "User updated" });
     }
   } catch (error) {
     console.log(error);
     res.status(500).json({message: "Internal server error" });
   }
-
-  // const id = req.body.user_id;
-  // const referredBy = req.body.referredBy;
-  // const selectedMembership = Number(req.body.membership);
-  // console.log(selectedMembership);
-  // const membershipLevels = [125, 250, 500, 1000];
-  // const membershipActivationCosts = {
-  //   1000: 1000,
-  //   500: 500,
-  //   250: 250,
-  //   125: 125
-  // };
-  // const user = await User.findById(id);
-
-  // // Verify user exists and has selected a valid membership level
-  // if (!user) {
-  //   res.status(404).json({ error: 'User not found' });
-  // } else if (!membershipLevels.includes(selectedMembership)) {
-  //   res.status(400).json({ error: 'Invalid membership level selected' });
-  // } else if (user.walletBalance < membershipActivationCosts[selectedMembership]) {
-  //   res.status(400).json({ error: 'Insufficient funds to activate user' });
-  // } else {
-  //   // Deduct activation cost from user's wallet balance and update account status
-  //   user.walletBalance -= membershipActivationCosts[selectedMembership];
-  //   user.membership = selectedMembership;
-  //   user.active = true;
-  //   await user.save(); // save the changes to the database    
-
-  //   console.log("Starting activation job for user with id: ", id);
-  //   if (active) {
-  //     startActivationJob({ userId: id, selectedMembership, referredBy}).then(() => {
-  //       console.log("Activation job completed for user with id: ", id);
-  //       res.status(200).json({ message: "User updated" });
-  //     });
-  //   } else {
-  //     res.status(200).json({ message: "User updated" });
-  //   }
-
-  //   // Return success response
-  //   res.json({ message: 'User activated successfully' });
-  // }
 };
 
 
+exports.allWithdrawLists = async (req, res) => { 
+  try {
+    const status = req.query.status; // new query parameter for withdrawal status
+    const pageNumber = parseInt(req.query.pageNumber) || 1;
+    const pageSize = parseInt(req.query.pageSize) || 10;
+    console.log(status, pageNumber, pageSize);
+
+    const skipAmount = (pageNumber - 1) * pageSize;
+
+    const filter = {}; // initialize empty filter object
+    if (status === "waiting") {
+      filter.amount_withdraw_status = "waiting"; // filter for pending withdrawals
+    } else if (status === "Approved") {
+      filter.amount_withdraw_status = "Approved"; // filter for completed withdrawals
+    } else if (status === "Rejected") {
+      filter.amount_withdraw_status = "Rejected"; // filter for completed withdrawals
+    } else {
+      return res.status(400).json({ message: `Invalid status: ${status}` }); // return error if status is invalid
+    }
+
+    const withdrawals = await withdraw.find({ ...filter }) // include filter object in find() query    
+    .find({ ...filter })  
+    .sort({ created_at: -1 })
+      .skip(skipAmount)
+      .limit(pageSize);
+
+      const totalCount = await withdraw.countDocuments({ ...filter });
+      const totalPages = Math.ceil(totalCount / pageSize);
+    
+      const pendingWithdrawals = await withdraw.find({ amount_withdraw_status: 'waiting' }); // get all approved withdrawals from the database
+      const pendingWithdrawalSum = pendingWithdrawals.reduce(
+        (total, w) => total + w.amount_withdraw,
+        0
+      );
+      const approvedWithdrawals = await withdraw.find({ amount_withdraw_status: 'Approved' }); // get all approved withdrawals from the database
+      const approvedWithdrawalSum = approvedWithdrawals.reduce(
+        (total, w) => total + w.amount_withdraw,
+        0
+      );
+      const rejectedWithdrawals = await withdraw.find({ amount_withdraw_status: 'Rejected' }); // get all approved withdrawals from the database
+      const rejectedWithdrawalSum = rejectedWithdrawals.reduce(
+        (total, w) => total + w.amount_withdraw,
+        0
+      );
+
+    if (pageNumber > totalPages) {
+      return res.status(400).json({ message: `Page number ${pageNumber} exceeds the total number of pages ${totalPages}` });
+    }
+
+    res.status(200).json({
+      withdrawals,
+      pageNumber,
+      pageSize,
+      totalPages,
+      totalCount,
+      pendingWithdrawalSum,
+      approvedWithdrawalSum,
+      rejectedWithdrawalSum
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).send('Internal Server Error');
+  }
+};
+
+exports.getWithdrawLists = async (req, res) => {
+  try {
+    const pageNumber = parseInt(req.query.pageNumber) || 1;
+    const pageSize = parseInt(req.query.pageSize) || 10;
+
+    const skipAmount = (pageNumber - 1) * pageSize;
+
+    const withdrawals = await withdraw
+      .find()
+      .sort({ created_at: -1 })
+      .skip(skipAmount)
+      .limit(pageSize);
+
+    const totalCount = await withdraw.countDocuments();
+
+    const totalPages = Math.ceil(totalCount / pageSize);
+
+    if (pageNumber > totalPages) {
+      return res.status(400).json({
+        message: `Page number ${pageNumber} exceeds the total number of pages ${totalPages}`,
+      });
+    }
+
+    res.status(200).json({
+      withdrawals,
+      pageNumber,
+      pageSize,
+      totalPages,
+      totalCount,
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).send('Internal Server Error');
+  }
+};
 // In your userController.js file

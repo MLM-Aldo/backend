@@ -1,25 +1,9 @@
 // Import Mongoose and the Referral model
 const mongoose = require('mongoose');
-//const Referral = require('../models/referral');
-exports.registerUserReferral = (referredBy, referralCode) => {
-
-    // Otherwise, create a new user object using the data
-    const newUserReferral = new Referral({
-      referredBy, referralCode
-    });
-
-    // Save the new user object to the database
-    return newUserReferral.save()
-    .then((user) => {
-        return true;
-    })
-    .catch((err) => {
-      // If there was an error saving the user, return an error response
-      return false;
-    });
-};
 const Referral = require('../models/referral');
 const User = require('../models/user');
+//const Referral = require('../models/referral');
+
 
 const referralSystem = process.env.REFERRAL_SYSTEM ? JSON.parse(process.env.REFERRAL_SYSTEM) : {
   "1": 25,
@@ -47,7 +31,6 @@ exports.startActivationJob = async (activationUser) => {
       }
     const userMembership = activationUser.membership;
     console.log(userMembership);
-    //const referredBy = activationUser.referredBy;
     if (activationUser.hasOwnProperty('referredBy')) {
         const referredBy = activationUser.referredBy;
         console.log('Activation user Referrer:', referredBy);
@@ -58,9 +41,9 @@ exports.startActivationJob = async (activationUser) => {
     const top8UsersList = [];
   
     for (let i = 0; i < 8; i++) {
-      const referral = await Referral.findOne({ referralCode: referredBy });
+      const referral = await User.findOne({ referralCode: referredBy });
       console.log('before user', referral);
-      if (referral && referral.referralCode != activationUser.referralCode) {
+      if (referral) {
         top8UsersList.push(referral);
         console.log(top8UsersList.push(referral))
         referredBy = referral.referredBy;
@@ -82,6 +65,7 @@ exports.startActivationJob = async (activationUser) => {
         const key = 'level' + level;
         referral[key] = referral[key] + 1;
         referral.referralBonus = referral.referralBonus + (referralSystem['' + level] / 100) * userMembership;
+        referral.walletBalance = referral.walletBalance + referral.referralBonus; // add referral bonus to wallet balance
         await referral.save();
         console.log("referral :", referral)
       } else {
@@ -90,7 +74,8 @@ exports.startActivationJob = async (activationUser) => {
           const level = i + 1;
           const key = 'level' + level;
           referral[key] = referral[key] + 1;
-          referral.referralBonus = referral.referralBonus + (referralSystem['' + level] / 100) * userMembership;
+          referral.referralbonus = referral.referralBonus + (referralSystem['' + level] / 100) * userMembership;
+          referral.walletBalance = referral.walletBalance + referral.referralBonus; // add referral bonus to wallet balance
           await referral.save();
           console.log("referral control:", referral)
         } else {
@@ -100,6 +85,7 @@ exports.startActivationJob = async (activationUser) => {
             const key = 'level' + level;
             referral[key] = referral[key] + 1;
             referral.referralBonus = referral.referralBonus + (referralSystem['' + level] / 100) * userMembership;
+            referral.walletBalance = referral.walletBalance + referral.referralBonus; // add referral bonus to wallet balance
             await referral.save();
             console.log("referral log :", referral)
           }

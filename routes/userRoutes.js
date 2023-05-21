@@ -1,11 +1,24 @@
 // Import required modules
 const express = require("express");
 const userController = require("../controllers/userController");
+const multer = require('multer');
+
+// Configure multer to store uploaded files in the desired folder
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'public/assets/images');
+  },
+  filename: function (req, file, cb) {
+    cb(null, file.originalname);
+  }
+});
 
 // Create a new instance of the user routes
 const router = express.Router();
 
 const upload = require("../middleware/multerFileFTP");
+
+const uploadFolder = multer({ storage: storage });
 
 // Define the user routes
 router.post("/register", userController.registerUser);
@@ -49,6 +62,9 @@ router.get("/:id/userTransactionHistory", userController.userTransactionHistory)
 router.get("/referrals/:referralCode/users", userController.directReferrals);
 router.get("/:id/getBalance", userController.getBalance);
 router.put("/:id/activatewallet", userController.activateWallet);
-
+router.get("/:id/currentUser", userController.currentUser);
+router.get("/allWithdrawLists",userController.allWithdrawLists);
+router.get("/getWithdrawLists",userController.getWithdrawLists);
+router.post("/:id/uploadBanner", userController.bannerImage);
 // Export the user routes
 module.exports = router;

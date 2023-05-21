@@ -3,10 +3,10 @@ const mongoose = require("mongoose");
 
 // Define the user schema using Mongoose
 const userSchema = new mongoose.Schema({
-  loginId: {
+  loginId:{
     type: Number,
     required: true,
-    unique: true
+    unique: true,
   },
   password: {
     type: String,
@@ -19,12 +19,10 @@ const userSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
-    unique: true,
   },
   phone: {
     type: String,
     required: true,
-    unique: true,
   },
   referredBy: {
     type: String,
@@ -44,6 +42,16 @@ const userSchema = new mongoose.Schema({
   active: { type: Boolean, default: false },
   isAdmin: { type: Boolean, default: false },
   created_at: { type: Date, default: Date.now },
+  level: {type: Number , min: 1, max: 10, default: 1},
+  level1 :  {type: Number , default: 0},
+  level2 :  {type: Number , default: 0},
+  level3 :  {type: Number , default: 0},
+  level4 :  {type: Number , default: 0},
+  level5 :  {type: Number , default: 0},
+  level6 :  {type: Number , default: 0},
+  level7 :  {type: Number , default: 0},
+  level8 :  {type: Number , default: 0},
+  referralBonus: {type: Number, default: 0},
 });
 
 // Create a pre-save hook to generate a unique referral code for each new user
